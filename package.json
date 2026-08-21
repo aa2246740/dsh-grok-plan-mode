@@ -51,7 +51,8 @@
     "cordis.yml",
     "dshx.yml",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "dependencies": {
     "zod": "^4.4.3"
