@@ -28,16 +28,42 @@ export function fallbackPlanPath(cwd: string | undefined): string {
   return join(cwd, '.dsh', 'plan.md')
 }
 
-/** Grok: session dir `plan.md` first; cwd `.grok/plan.md` if no session path. */
+/**
+ * Workspace-owned per-session plan file.
+ *
+ * Grok writes `plan.md` in the session directory because that directory is
+ * already agent-writable. DSH `workspace-write` only allows the project cwd,
+ * so `~/.dsh/sessions/.../plan.md` needs a sandbox escalation (and a user
+ * click). Plan mode is not a privilege bump — it is a tighter edit gate —
+ * so the designated file lives under the workspace instead.
+ */
+export function workspacePlanFilePath(cwd: string | undefined, sessionId: string): string | undefined {
+  if (cwd === undefined || cwd.trim() === '') return undefined
+  return join(cwd, '.dsh', 'plans', sessionId, 'plan.md')
+}
+
+/**
+ * Grok: session dir `plan.md` first; cwd `.grok/plan.md` if no session path.
+ * DSH: workspace `$cwd/.dsh/plans/<id>/plan.md` first so Workspace Write can
+ * persist the plan without asking; session dir keeps `plan_mode.json` and a
+ * leftover `plan.md` alias.
+ */
 export function resolvePlanFilePath(input: {
   sessionId: string
   cwd?: string
   home?: string
-}): { sessionDir: string; planFilePath: string; fallbackPath: string } {
+}): {
+  sessionDir: string
+  planFilePath: string
+  sessionPlanPath: string
+  fallbackPath: string
+} {
   const dir = sessionDir(input)
+  const sessionPlanPath = join(dir, 'plan.md')
   return {
     sessionDir: dir,
-    planFilePath: join(dir, 'plan.md'),
+    planFilePath: workspacePlanFilePath(input.cwd, input.sessionId) ?? sessionPlanPath,
+    sessionPlanPath,
     fallbackPath: fallbackPlanPath(input.cwd),
   }
 }
@@ -87,6 +113,27 @@ export async function probeOrCreateEmptyPlanFile(path: string): Promise<PlanFile
       return { kind: 'missing', reason: 'not_created' }
     }
   }
+}
+
+/**
+ * If an older session left content only in `~/.dsh/sessions/.../plan.md`,
+ * copy it once into the workspace plan file. Never overwrite a nonempty dest.
+ */
+export async function adoptLegacyPlanFile(from: string, to: string): Promise<void> {
+  if (normalizeLoose(from) === normalizeLoose(to)) return
+  if (await planFileHasContent(to)) return
+  const text = await readPlanFile(from)
+  if (text === undefined) return
+  await mkdir(dirname(to), { recursive: true })
+  try {
+    await writeFile(to, text, { flag: 'wx' })
+  } catch (error) {
+    if (!isAlreadyExists(error)) throw error
+  }
+}
+
+function normalizeLoose(value: string): string {
+  return value.replace(/\\/g, '/')
 }
 
 export async function writePlanModeJson(sessionDirectory: string, json: unknown): Promise<void> {

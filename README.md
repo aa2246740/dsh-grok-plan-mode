@@ -18,7 +18,7 @@ Grok / 本插件：
 |---|---|---|
 | 状态 | `Inactive → Pending → Active → ExitPending` | 同左 |
 | 恢复 | `Pending` / `ExitPending` 塌回；`plan_mode.json` | session 事件 `grok-plan/state` + `~/.dsh/sessions/<cwd>/<id>/plan_mode.json` |
-| 计划文件 | session 目录 `plan.md`，缺了再回退 `.grok/plan.md` | session 目录 `plan.md`，回退 `$cwd/.dsh/plan.md` |
+| 计划文件 | session 目录 `plan.md`，缺了再回退 `.grok/plan.md` | 工作区 `$cwd/.dsh/plans/<session-id>/plan.md`（Workspace Write 能直接写，不用提权）；`plan_mode.json` 仍在 `~/.dsh/sessions/...` |
 | 种子 | 没有就建空文件，**从不截断**已有内容 | 同左 |
 | `/plan` | 下次提问生效；`/plan 文本` 进入并开一轮 | 同左 |
 | `/view-plan` | 别名 `/show-plan` `/plan-view` | 同左 |
@@ -65,7 +65,7 @@ pnpm dsh web --no-open --port 3080
 
 ### 用 dshx 车间
 
-dshx 是辅助，不要改它的仓库。插件已经作为 profile bundle 装好时，直接 `dshx start web`（不要带插件名，避免再写一份绝对路径 overlay）。还在车间里、没进 `dsh.profile.bundles` 时：
+ dshx 是辅助，不要改它的仓库。插件已经作为 profile bundle 装好时，直接 `dshx start web`（不要带插件名，避免再写一份绝对路径 overlay）。还在车间里、没进 `dsh.profile.bundles` 时：
 
 ```sh
 dshx check dsh-grok-plan-mode
@@ -96,11 +96,13 @@ dshx verify-boot dsh-grok-plan-mode --keep
 ## 文件
 
 ```
-~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan.md
+$cwd/.dsh/plans/<session-id>/plan.md
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan_mode.json
 ```
 
-`DSH_HOME` 可改根目录。没有 session 路径时回退 `$cwd/.dsh/plan.md`。
+Grok 的 session 目录对 agent 本来就能写。DSH 默认 Workspace Write 只准改项目目录，`~/.dsh/sessions/.../plan.md` 要沙箱提权，还会弹出审批。Plan mode 不是最高权限，是更窄的编辑闸：别的文件照样拦，只有这份 plan 能写，而且写它不再问你。
+
+没有 cwd 时才退回 session 目录 `plan.md`。老 session 若只在 `~/.dsh` 里有内容，进入时会拷进工作区，不覆盖已有工作区 plan。`.dsh/` 可以自己加 gitignore。
 
 ## 测试
 
