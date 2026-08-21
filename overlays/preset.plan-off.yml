@@ -1,0 +1,6 @@
+# Official Plan is remounted inside each agent preset (`standard`, `code`,
+# `cordis`). `/plan` and `exit_plan_mode` cannot be double-registered.
+# Merge this row into those presets' agent.cordis.yml.
+
+- id: plan-mode
+  disabled: true

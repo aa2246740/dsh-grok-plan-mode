@@ -1,0 +1,16 @@
+# Disable official DSH Plan on the host/web plane, then mount this plugin.
+# Apply with a user/profile `--patch` or merge into $DSH_HOME/cordis.patch.yml.
+#
+# Web already disables host `plan-mode` and remounts it inside presets.
+# This file is not enough by itself — also apply preset.plan-off.yml to
+# standard / code / cordis.
+
+- id: ui-plan
+  disabled: true
+
+- id: plan-mode
+  disabled: true
+
+- insert:
+    - id: grok-plan-mode
+      name: 'dsh-grok-plan-mode'

@@ -1,0 +1,12 @@
+# Portable overlay when this repo is copied to harness my-plugins/dsh-grok-plan-mode.
+# --patch resolves against the profile directory, so cold-boot through dshx.
+
+- id: ui-plan
+  disabled: true
+
+- id: plan-mode
+  disabled: true
+
+- insert:
+    - id: grok-plan-mode
+      name: './src/index.ts'
