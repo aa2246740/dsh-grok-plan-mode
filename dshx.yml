@@ -1,0 +1,5 @@
+id: grok-plan-mode
+entry: src/index.ts
+marker: "[dsh-grok-plan-mode] loaded"
+kind: function
+profile: web

@@ -1,0 +1,7 @@
+- id: ui-plan
+  disabled: true
+- id: plan-mode
+  disabled: true
+- insert:
+    - id: grok-plan-mode
+      name: './src/index.ts'
