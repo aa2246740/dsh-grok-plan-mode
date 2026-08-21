@@ -24,11 +24,11 @@ DSH Web has no Shift+Tab. After `/plan`, a **Plan** pill sits on the composer. C
 
 ### Review card
 
-`exit_plan_mode` and `/view-plan` open the same card. Select lines to comment; leave notes for the model. An empty plan still opens it.
+`exit_plan_mode` and `/view-plan` open the same card. It reads the `plan.md` already on disk. Select lines to comment; leave notes for the model. An empty plan still opens the card — the product is reviewing a written plan.
 
-![`/view-plan` review card over the official WebUI](docs/screenshots/plan-review.png)
+![`/view-plan` on a written plan.md, over the official WebUI](docs/screenshots/plan-review.png)
 
-![Empty plan still needs a click; notes stay on the card](docs/screenshots/plan-review-comments.png)
+![Same card, with notes for the model](docs/screenshots/plan-review-comments.png)
 
 - **Approve** — leave Plan and implement `plan.md`
 - **Request changes** — keep Plan on, send notes / line comments back
@@ -36,9 +36,7 @@ DSH Web has no Shift+Tab. After `/plan`, a **Plan** pill sits on the composer. C
 
 ### Edit gate
 
-While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` may only touch the session `plan.md`. This is real output from this repo’s tracker and gate, not a mock transcript:
-
-![Real tracker / gate / reminder output](docs/screenshots/gate-walkthrough.png)
+While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` may only touch the session `plan.md`.
 
 Bash is not gated. Redirects can write files. Grok’s docs gate edit tools, not the shell; this port does not “fix” that. Subagents (`origin === 'subagent'` or `delegationDepth > 0`) do not inherit the parent gate.
 
