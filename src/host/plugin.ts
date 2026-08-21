@@ -11,7 +11,6 @@ import {
   foldGrokPlan,
   GROK_PLAN_EVENT,
   hasOpenTurn,
-  officialPlanView,
   viewFromSnapshot,
 } from '../fold.ts'
 import {
@@ -291,12 +290,14 @@ export function applyGrokPlanMode(ctx: Context): void {
       view: (state: UnitState) => viewFromSnapshot('empty' in state ? undefined : state),
       stateVersion: 1,
     })
+    // Keep the official `plan` seat dark. A leftover ui-plan chip reads this
+    // projection; lighting it would put a Plan chip on the composer.
     projectionCtx.sessionProjections.register({
       key: 'plan',
       schema: officialPlanSchema,
       init: (): UnitState => ({ empty: true }),
       apply: (state: UnitState, event) => event.type === GROK_PLAN_EVENT ? event.data : state,
-      view: (state: UnitState) => officialPlanView(viewFromSnapshot('empty' in state ? undefined : state)),
+      view: () => ({ active: false, pending: false }),
       stateVersion: 1,
     })
   }
