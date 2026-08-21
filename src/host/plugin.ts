@@ -15,6 +15,7 @@ import {
   viewFromSnapshot,
 } from '../fold.ts'
 import {
+  adoptLegacyPlanFile,
   planFileHasContent,
   probeOrCreateEmptyPlanFile,
   readPlanFile,
@@ -85,9 +86,10 @@ export function applyGrokPlanMode(ctx: Context): void {
     if (existing !== undefined) return existing
     const paths = pathsOf(agent)
     const folded = foldGrokPlan(agent.session.events)
+    const aliases = paths.sessionPlanPath === paths.planFilePath ? [] : [paths.sessionPlanPath]
     const tracker = folded === undefined
-      ? new PlanModeTracker(paths.sessionDir)
-      : PlanModeTracker.fromSnapshot(paths.sessionDir, folded)
+      ? new PlanModeTracker(paths.sessionDir, paths.planFilePath, aliases)
+      : PlanModeTracker.fromSnapshot(paths.sessionDir, folded, paths.planFilePath, aliases)
     trackers.set(agent.session, tracker)
     return tracker
   }
@@ -131,11 +133,12 @@ export function applyGrokPlanMode(ctx: Context): void {
       const reentry = tracker.isReentry()
       tracker.activate()
       persist(agent)
+      const seed = await ensurePlanFile(agent, tracker)
       const text = reentry
         ? planModeReentryReminder({ planPath: tracker.planFilePath(), tools: hints })
         : planModeReminderFull({
           planPath: tracker.planFilePath(),
-          planHasContent: await planFileHasContent(tracker.planFilePath()),
+          planHasContent: seed.kind === 'non_empty' || await planFileHasContent(tracker.planFilePath()),
           tools: hints,
         })
       injections.push(notice(wrapSystemReminder(text)))
@@ -319,7 +322,7 @@ export function applyGrokPlanMode(ctx: Context): void {
       if (agent === undefined) throw new Error(`${ENTER_PLAN_MODE} requires a calling agent`)
       const tracker = trackerOf(agent)
       tracker.activateFromTool()
-      const seed = await probeOrCreateEmptyPlanFile(tracker.planFilePath())
+      const seed = await ensurePlanFile(agent, tracker)
       persist(agent)
       const hints = hintsOf()
       const text = formatEnterPlanMode({
@@ -445,6 +448,12 @@ function applyOutcome(
     return
   }
   tracker.setAwaitingPlanApproval(false)
+}
+
+async function ensurePlanFile(agent: Agent, tracker: PlanModeTracker) {
+  const paths = pathsOf(agent)
+  await adoptLegacyPlanFile(paths.sessionPlanPath, tracker.planFilePath())
+  return probeOrCreateEmptyPlanFile(tracker.planFilePath())
 }
 
 function enterFromCommand(agent: Agent, tracker: PlanModeTracker): void {

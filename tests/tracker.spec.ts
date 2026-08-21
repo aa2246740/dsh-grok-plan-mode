@@ -63,9 +63,20 @@ describe('PlanModeTracker', () => {
     assert.equal(t.shouldUseFullReminder(), true)
   })
 
-  it('puts the plan file in the session dir', () => {
+  it('puts the plan file in the session dir by default', () => {
     const t = new PlanModeTracker('/home/user/.dsh/sessions/proj/abc-123')
     assert.equal(t.planFilePath(), '/home/user/.dsh/sessions/proj/abc-123/plan.md')
+  })
+
+  it('accepts a workspace plan path and still auto-approves the session alias', () => {
+    const sessionPlan = '/home/user/.dsh/sessions/proj/abc-123/plan.md'
+    const workspacePlan = '/workspace/.dsh/plans/abc-123/plan.md'
+    const t = new PlanModeTracker('/home/user/.dsh/sessions/proj/abc-123', workspacePlan, [sessionPlan])
+    t.activateFromTool()
+    assert.equal(t.planFilePath(), workspacePlan)
+    assert.equal(t.shouldAutoApproveEdit(workspacePlan), true)
+    assert.equal(t.shouldAutoApproveEdit(sessionPlan), true)
+    assert.equal(t.shouldAutoApproveEdit('/workspace/hello.txt'), false)
   })
 
   it('compaction resets to the full reminder', () => {
