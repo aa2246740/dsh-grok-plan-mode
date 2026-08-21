@@ -62,6 +62,7 @@ export function PlanReview({ matched, t }: PlanReviewProps) {
           answers: [{
             id: REVIEW_QUESTION_ID,
             selected: [label],
+            // Host question is multiSelect so RPC accepts selected + notes.
             ...custom !== undefined && custom.trim() !== '' ? { custom } : {},
           }],
         },
