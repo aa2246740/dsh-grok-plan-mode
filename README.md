@@ -26,9 +26,9 @@ DSH Web 没有 Shift+Tab。`/plan` 之后，输入框上出现 **Plan**。点 ×
 
 `exit_plan_mode` 和 `/view-plan` 打开同一张卡，读的是磁盘上已经写好的 `plan.md`。划词可以写批注，下面还能给模型留说明。空 plan 也开这张面，但产品要看的是写好的计划。
 
-![`/view-plan` 打开写好的 plan.md，盖在官方 WebUI 上](docs/screenshots/plan-review.png)
+![`/view-plan` 打开写好的 plan.md（标题 RATE-LIMIT POST /login），盖在官方 WebUI 上](docs/screenshots/plan-review.png)
 
-![同一张卡，下面可以给模型留说明](docs/screenshots/plan-review-comments.png)
+![同一张卡，Notes 里写了说明](docs/screenshots/plan-review-comments.png)
 
 - **Approve** — 离开 Plan，按 `plan.md` 开始做
 - **Request changes** — 说明 / 行批注留下来，继续停在 Plan

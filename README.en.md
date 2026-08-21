@@ -26,9 +26,9 @@ DSH Web has no Shift+Tab. After `/plan`, a **Plan** pill sits on the composer. C
 
 `exit_plan_mode` and `/view-plan` open the same card. It reads the `plan.md` already on disk. Select lines to comment; leave notes for the model. An empty plan still opens the card — the product is reviewing a written plan.
 
-![`/view-plan` on a written plan.md, over the official WebUI](docs/screenshots/plan-review.png)
+![`/view-plan` on a written plan.md titled RATE-LIMIT POST /login, over the official WebUI](docs/screenshots/plan-review.png)
 
-![Same card, with notes for the model](docs/screenshots/plan-review-comments.png)
+![Same card, with a note in the Notes field](docs/screenshots/plan-review-comments.png)
 
 - **Approve** — leave Plan and implement `plan.md`
 - **Request changes** — keep Plan on, send notes / line comments back
