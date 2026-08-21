@@ -50,7 +50,7 @@ export function viewFromSnapshot(snapshot: GrokPlanEventData | undefined): GrokP
 export function officialPlanView(view: GrokPlanProjection): { active: boolean; pending: boolean } {
   if (view.state === 'ExitPending') return { active: true, pending: false }
   if (view.state === 'Pending') return { active: false, pending: true }
-  return { active: view.active, pending: view.pending }
+  return { active: view.active, pending: false }
 }
 
 export function hasOpenTurn(events: readonly { type: string }[]): boolean {
