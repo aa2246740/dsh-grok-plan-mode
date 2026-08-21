@@ -4,4 +4,4 @@
   disabled: true
 - insert:
     - id: grok-plan-mode
-      name: './src/index.ts'
+      name: dsh-grok-plan-mode
