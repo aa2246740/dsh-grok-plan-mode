@@ -38,43 +38,41 @@ DSH 没有 Shift+Tab 切模式的缝。Web 用输入框上的 Plan 芯片和 `/p
 
 Web 会在 host 上关掉 `plan-mode`，再在 preset `standard` / `code` / `cordis` 里重新挂上。只改 host 不够。
 
-### 用 dshx 车间（推荐）
+### 官方 profile 挂（真机验收走过的路）
 
-dshx 是辅助工具，不要改它的仓库。把**本仓库**拷进当前 Harness 的 `my-plugins/`：
+包声明了 `dsh.bundle`。从 Harness 源码树：
 
 ```sh
 git clone https://github.com/aa2246740/dsh-grok-plan-mode.git \
   /path/to/deepseek-harness/my-plugins/dsh-grok-plan-mode
 
-# 每个会用到 Plan 的 preset 都要关掉官方 plan-mode
-# 见 overlays/preset.plan-off.yml
-```
-
-Host / Web overlay 用仓库里的 `cordis.yml`（禁用 `ui-plan` + `plan-mode`，插入本插件）。Preset 层把 `overlays/preset.plan-off.yml` 合进：
-
-- `apps/cli/config/agent-presets/standard/agent.cordis.yml`
-- `apps/cli/config/agent-presets/code/agent.cordis.yml`
-- `apps/cli/config/agent-presets/cordis/agent.cordis.yml`
-
-那三份是 **Harness 自己的文件**。本插件不替你改它们。你自己合，或者做用户 preset。
-
-然后：
-
-```sh
 cd /path/to/deepseek-harness
-dshx check dsh-grok-plan-mode
-dshx activation-plan dsh-grok-plan-mode --change new-client
+pnpm dsh plugin --profile web add link:./my-plugins/dsh-grok-plan-mode
+# 或：pnpm dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
 ```
 
-Client 半要建成 RC8 的 `lib/client.js` lazy-CJS。在 Harness 里用 dshx 的 `externalClientBundle`，不要改 DSH 的 `packages/*/*` glob。
+`cordis.yml` 会禁用 host 上的 `ui-plan` / `plan-mode`，并插入本插件（`name: dsh-grok-plan-mode`，这样 `__DSH_BOOT__` 才会扫到 `dsh.client`）。
 
-### 当包挂
+Web 还会在 preset `standard` / `code` / `cordis` 里重新挂官方 `plan-mode`。只改 host 不够。把 `overlays/preset.plan-off.yml` 合进你自己的 preset 副本，或改用户 preset。那三份 Harness 文件本插件不替你改。
+
+然后用官方 Web，不要再叠一层 dshx `--patch` overlay（会和 bundle 重复插入同一 id）：
 
 ```sh
-pnpm dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+pnpm dsh web --no-open --port 3080
 ```
 
-再按上面关掉官方 Plan，并保证 package 能解析到 `src/index.ts`。
+已打好的 `lib/client.js` 是 RC8 lazy-CJS。从 git 装时请用带 `lib/` 的提交，或在有 dshx `externalClientBundle` 的 Harness 里 `pnpm build`。
+
+### 用 dshx 车间
+
+dshx 是辅助，不要改它的仓库。插件已经作为 profile bundle 装好时，直接 `dshx start web`（不要带插件名，避免再写一份绝对路径 overlay）。还在车间里、没进 `dsh.profile.bundles` 时：
+
+```sh
+dshx check dsh-grok-plan-mode
+dshx verify-boot dsh-grok-plan-mode --keep
+```
+
+`verify-boot` 只证明 host `apply()` 和 HTTP。Client 行要靠上面的官方 bundle 安装，`name` 必须是包名而不是 `src/index.ts`。
 
 ## 命令和工具
 
@@ -113,6 +111,14 @@ npm test
 ```
 
 对照 Grok 源码里的同名用例：`PlanModeTracker`、`plan_mode_edit_gate`、reminder 模板、`format_feedback`、`probe_or_create_empty_plan_file`。
+
+在已装官方 DSH 的 Harness checkout 里，还可以跑 RC8 服务集成（不启 Web）：
+
+```sh
+DSHX_HARNESS=/path/to/deepseek-harness \
+  pnpm --dir "$DSHX_HARNESS" exec vitest run \
+  --config my-plugins/dsh-grok-plan-mode/vitest.live.config.ts
+```
 
 ## 明确不搬的东西
 
