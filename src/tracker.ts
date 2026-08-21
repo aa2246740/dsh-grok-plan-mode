@@ -19,18 +19,25 @@ export class PlanModeTracker {
   private awaitingPlanApproval: boolean
   private pendingActivation: PendingActivation | undefined
   private readonly planFilePathValue: string
+  private readonly planAliases: readonly string[]
 
-  constructor(sessionDir: string) {
+  constructor(sessionDir: string, planFilePath?: string, aliases: readonly string[] = []) {
     this.state = 'Inactive'
     this.wasPreviouslyActive = false
     this.reminderCount = 0
     this.pendingExitReminder = false
     this.awaitingPlanApproval = false
     this.pendingActivation = undefined
-    this.planFilePathValue = joinPlanFile(sessionDir)
+    this.planFilePathValue = planFilePath ?? joinPlanFile(sessionDir)
+    this.planAliases = aliases
   }
 
-  static fromSnapshot(sessionDir: string, snapshot: PlanModeSnapshot): PlanModeTracker {
+  static fromSnapshot(
+    sessionDir: string,
+    snapshot: PlanModeSnapshot,
+    planFilePath?: string,
+    aliases: readonly string[] = [],
+  ): PlanModeTracker {
     const next = { ...snapshot }
     if (next.state === 'Pending') {
       next.state = 'Inactive'
@@ -38,7 +45,7 @@ export class PlanModeTracker {
       next.state = 'Inactive'
       next.pending_exit_reminder = true
     }
-    const tracker = new PlanModeTracker(sessionDir)
+    const tracker = new PlanModeTracker(sessionDir, planFilePath, aliases)
     tracker.state = next.state
     tracker.wasPreviouslyActive = next.was_previously_active
     tracker.reminderCount = next.reminder_count
@@ -78,7 +85,9 @@ export class PlanModeTracker {
   }
 
   shouldAutoApproveEdit(editPath: string): boolean {
-    return this.isActive() && isPlanFileWrite(editPath, this.planFilePathValue)
+    if (!this.isActive()) return false
+    if (isPlanFileWrite(editPath, this.planFilePathValue)) return true
+    return this.planAliases.some(alias => isPlanFileWrite(editPath, alias))
   }
 
   shouldUseFullReminder(): boolean {

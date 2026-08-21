@@ -18,7 +18,7 @@ Grok / 本插件：
 |---|---|---|
 | 状态 | `Inactive → Pending → Active → ExitPending` | 同左 |
 | 恢复 | `Pending` / `ExitPending` 塌回；`plan_mode.json` | session 事件 `grok-plan/state` + `~/.dsh/sessions/<cwd>/<id>/plan_mode.json` |
-| 计划文件 | session 目录 `plan.md`，缺了再回退 `.grok/plan.md` | session 目录 `plan.md`，回退 `$cwd/.dsh/plan.md` |
+| 计划文件 | session 目录 `plan.md`，缺了再回退 `.grok/plan.md` | 工作区 `$cwd/.dsh/plans/<session-id>/plan.md`（Workspace Write 能直接写，不用提权）；`plan_mode.json` 仍在 `~/.dsh/sessions/...` |
 | 种子 | 没有就建空文件，**从不截断**已有内容 | 同左 |
 | `/plan` | 下次提问生效；`/plan 文本` 进入并开一轮 | 同左 |
 | `/view-plan` | 别名 `/show-plan` `/plan-view` | 同左 |
@@ -30,11 +30,11 @@ Grok / 本插件：
 | 审批 | 空 plan 也打开；auto 不能跳过；批准 / 要求修改 / 行批注 / 放弃 | Web 面板，鼠标即可，快捷键不跟 TUI |
 | 提醒 | 满/疏交替、再入、退出，包在 `<system-reminder>` | `agent/pre-step` 注入，文案对齐 |
 
-DSH 没有 Shift+Tab 切模式的缝。Web 用输入框上的 Plan 芯片和 `/plan` 代替。
+入口只有 `/plan`。不占输入框芯片，也不用 Shift+Tab。审批面仍在模型交出计划时打开。
 
 ## 装
 
-先卸官方 Plan，再挂本插件。`/plan` 和 `exit_plan_mode` **不能双注册**。`conversation.input.plan` 也是单座。
+先卸官方 Plan，再挂本插件。`/plan` 和 `exit_plan_mode` **不能双注册**。官方 `conversation.input.plan` 芯片座故意留空，避免输入框常驻 Plan 芯片。
 
 Web 会在 host 上关掉 `plan-mode`，再在 preset `standard` / `code` / `cordis` 里重新挂上。只改 host 不够。
 
@@ -81,7 +81,7 @@ dshx verify-boot dsh-grok-plan-mode --keep
 | `/plan` | 进入，下次提问生效 |
 | `/plan <text>` | 进入并开一轮 |
 | `/view-plan` `/show-plan` `/plan-view` | 打开已保存预览 |
-| 芯片 × / `/grok-plan-leave` | 退出（Web 没有 Shift+Tab） |
+| `/grok-plan-leave` | 退出（审批里的 Quit 也可以） |
 | `enter_plan_mode` | 模型自己认为任务含糊时进入 |
 | `exit_plan_mode` | 读 `plan.md`，停在审批，不把 plan 放进工具参数 |
 
@@ -96,11 +96,13 @@ dshx verify-boot dsh-grok-plan-mode --keep
 ## 文件
 
 ```
-~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan.md
+$cwd/.dsh/plans/<session-id>/plan.md
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan_mode.json
 ```
 
-`DSH_HOME` 可改根目录。没有 session 路径时回退 `$cwd/.dsh/plan.md`。
+计划文件就在**当前项目**里，不是家目录。`$cwd` 是会话工作区，Workspace Write 能直接写这份 plan，不用提权。以前写到 `~/.dsh/sessions/.../plan.md` 才出问题：那不在项目里，沙箱会拦。
+
+按会话分子目录，避免同一个仓库里两个对话互相覆盖，也不会在仓库根上冒出一个进 git 的 `plan.md`。`.dsh/` 可以自己加 gitignore。没有 cwd 时才退回 session 目录。老 session 若只在 `~/.dsh` 里有内容，进入时拷进项目，不覆盖已有项目 plan。
 
 ## 测试
 
@@ -123,7 +125,7 @@ DSHX_HARNESS=/path/to/deepseek-harness \
 ## 明确不搬的东西
 
 - TUI LineViewer / 快捷键 `a s c q Tab`。能力在，交互改成 Web 按钮和划词批注。
-- Shift+Tab 模式环。DSH composer 没有这条缝。
+- Shift+Tab 模式环。入口只做 `/plan`，不占输入框芯片。
 - 给 bash 加命令检查。Grok 文档写明闸的是编辑工具，不是 shell。
 - 官方 Goal 栈。`/goal` 不动。
 

@@ -1,8 +1,4 @@
 export const en = {
-  'chip.plan': 'Plan',
-  'chip.approval': 'Plan approval',
-  'chip.on.aria': 'Plan mode is on. Click to leave.',
-  'chip.approval.aria': 'Plan approval is open. Click to leave plan mode.',
   'review.header': 'Plan approval',
   'review.empty': 'No plan written — approve or request changes',
   'review.waiting': 'Waiting on plan approval',
@@ -17,10 +13,6 @@ export const en = {
 }
 
 export const zh = {
-  'chip.plan': 'Plan',
-  'chip.approval': 'Plan approval',
-  'chip.on.aria': '计划模式已开启。点击退出。',
-  'chip.approval.aria': '计划审批已打开。点击退出计划模式。',
   'review.header': '计划审批',
   'review.empty': '还没有写计划 — 批准或要求修改',
   'review.waiting': '等待计划审批',
