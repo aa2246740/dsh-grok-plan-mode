@@ -30,11 +30,11 @@ Grok / 本插件：
 | 审批 | 空 plan 也打开；auto 不能跳过；批准 / 要求修改 / 行批注 / 放弃 | Web 面板，鼠标即可，快捷键不跟 TUI |
 | 提醒 | 满/疏交替、再入、退出，包在 `<system-reminder>` | `agent/pre-step` 注入，文案对齐 |
 
-DSH 没有 Shift+Tab 切模式的缝。Web 用输入框上的 Plan 芯片和 `/plan` 代替。
+入口只有 `/plan`。不占输入框芯片，也不用 Shift+Tab。审批面仍在模型交出计划时打开。
 
 ## 装
 
-先卸官方 Plan，再挂本插件。`/plan` 和 `exit_plan_mode` **不能双注册**。`conversation.input.plan` 也是单座。
+先卸官方 Plan，再挂本插件。`/plan` 和 `exit_plan_mode` **不能双注册**。官方 `conversation.input.plan` 芯片座故意留空，避免输入框常驻 Plan 芯片。
 
 Web 会在 host 上关掉 `plan-mode`，再在 preset `standard` / `code` / `cordis` 里重新挂上。只改 host 不够。
 
@@ -65,7 +65,7 @@ pnpm dsh web --no-open --port 3080
 
 ### 用 dshx 车间
 
- dshx 是辅助，不要改它的仓库。插件已经作为 profile bundle 装好时，直接 `dshx start web`（不要带插件名，避免再写一份绝对路径 overlay）。还在车间里、没进 `dsh.profile.bundles` 时：
+dshx 是辅助，不要改它的仓库。插件已经作为 profile bundle 装好时，直接 `dshx start web`（不要带插件名，避免再写一份绝对路径 overlay）。还在车间里、没进 `dsh.profile.bundles` 时：
 
 ```sh
 dshx check dsh-grok-plan-mode
@@ -81,7 +81,7 @@ dshx verify-boot dsh-grok-plan-mode --keep
 | `/plan` | 进入，下次提问生效 |
 | `/plan <text>` | 进入并开一轮 |
 | `/view-plan` `/show-plan` `/plan-view` | 打开已保存预览 |
-| 芯片 × / `/grok-plan-leave` | 退出（Web 没有 Shift+Tab） |
+| `/grok-plan-leave` | 退出（审批里的 Quit 也可以） |
 | `enter_plan_mode` | 模型自己认为任务含糊时进入 |
 | `exit_plan_mode` | 读 `plan.md`，停在审批，不把 plan 放进工具参数 |
 
@@ -100,9 +100,9 @@ $cwd/.dsh/plans/<session-id>/plan.md
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan_mode.json
 ```
 
-Grok 的 session 目录对 agent 本来就能写。DSH 默认 Workspace Write 只准改项目目录，`~/.dsh/sessions/.../plan.md` 要沙箱提权，还会弹出审批。Plan mode 不是最高权限，是更窄的编辑闸：别的文件照样拦，只有这份 plan 能写，而且写它不再问你。
+计划文件就在**当前项目**里，不是家目录。`$cwd` 是会话工作区，Workspace Write 能直接写这份 plan，不用提权。以前写到 `~/.dsh/sessions/.../plan.md` 才出问题：那不在项目里，沙箱会拦。
 
-没有 cwd 时才退回 session 目录 `plan.md`。老 session 若只在 `~/.dsh` 里有内容，进入时会拷进工作区，不覆盖已有工作区 plan。`.dsh/` 可以自己加 gitignore。
+按会话分子目录，避免同一个仓库里两个对话互相覆盖，也不会在仓库根上冒出一个进 git 的 `plan.md`。`.dsh/` 可以自己加 gitignore。没有 cwd 时才退回 session 目录。老 session 若只在 `~/.dsh` 里有内容，进入时拷进项目，不覆盖已有项目 plan。
 
 ## 测试
 
@@ -125,7 +125,7 @@ DSHX_HARNESS=/path/to/deepseek-harness \
 ## 明确不搬的东西
 
 - TUI LineViewer / 快捷键 `a s c q Tab`。能力在，交互改成 Web 按钮和划词批注。
-- Shift+Tab 模式环。DSH composer 没有这条缝。
+- Shift+Tab 模式环。入口只做 `/plan`，不占输入框芯片。
 - 给 bash 加命令检查。Grok 文档写明闸的是编辑工具，不是 shell。
 - 官方 Goal 栈。`/goal` 不动。
 
