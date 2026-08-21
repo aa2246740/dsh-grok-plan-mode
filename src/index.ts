@@ -9,7 +9,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { applyGrokPlanMode } from './host/plugin.ts'
 
 export const name = 'grok-plan-mode'
-export const inject = ['tools', 'systemPrompt']
+export const inject = ['tools', 'systemPrompt', 'commands', 'sessionProjections']
 
 export function apply(ctx: Context): void {
   console.log('[dsh-grok-plan-mode] loaded')

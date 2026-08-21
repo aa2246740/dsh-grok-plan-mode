@@ -15,10 +15,13 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./client": "./src/client/index.tsx",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.yml"
+    },
     "client": {
       "inject": [
         "@deepseek-ai/dsh-api-remotes",
@@ -29,7 +32,8 @@
     }
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test tests/*.spec.ts"
+    "build": "tsdown",
+    "test": "node --experimental-strip-types --test tests/tracker.spec.ts tests/reminders.spec.ts tests/gate.spec.ts tests/review.spec.ts tests/plan-file.spec.ts tests/fold.spec.ts tests/prompts.spec.ts"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -42,6 +46,7 @@
   ],
   "files": [
     "src",
+    "lib/client.js",
     "overlays",
     "cordis.yml",
     "dshx.yml",
@@ -52,7 +57,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^22.20.0"
+    "@types/node": "^22.20.0",
+    "tsdown": "^0.22.2"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
@@ -66,14 +72,32 @@
     "@deepseek-ai/dsh-user-questions": "*"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-agent": { "optional": true },
-    "@deepseek-ai/dsh-commands": { "optional": true },
-    "@deepseek-ai/dsh-llm": { "optional": true },
-    "@deepseek-ai/dsh-session": { "optional": true },
-    "@deepseek-ai/dsh-session-projection": { "optional": true },
-    "@deepseek-ai/dsh-system-prompt": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true },
-    "@deepseek-ai/dsh-user-questions": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-commands": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-projection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-system-prompt": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-user-questions": {
+      "optional": true
+    }
   }
 }
