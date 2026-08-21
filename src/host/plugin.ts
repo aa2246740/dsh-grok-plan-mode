@@ -184,12 +184,14 @@ export function applyGrokPlanMode(ctx: Context): void {
     return next()
   })
 
-  ctx.inject(['commands'], (commandCtx) => {
+  {
     const register = (name: string, description: string, hint: string, handler: typeof handlePlan) => {
-      commandCtx.commands.register({
+      ctx.commands.register({
         name,
         description,
-        input: { hint, images: true },
+        ...hint.trim() === ''
+          ? {}
+          : { input: { hint, images: true } },
         handler,
       })
     }
@@ -259,9 +261,10 @@ export function applyGrokPlanMode(ctx: Context): void {
     for (const name of ['view-plan', 'show-plan', 'plan-view'] as const) {
       register(name, 'Open a preview of the current saved plan', '', viewPlan)
     }
-  })
+  }
 
-  ctx.inject(['sessionProjections'], (projectionCtx) => {
+  {
+    const projectionCtx = ctx
     type UnitState = ReturnType<typeof foldGrokPlan> | { readonly empty: true }
     const grokPlanSchema = zod.object({
       state: zod.enum(['Inactive', 'Pending', 'Active', 'ExitPending']),
@@ -293,7 +296,7 @@ export function applyGrokPlanMode(ctx: Context): void {
       view: (state: UnitState) => officialPlanView(viewFromSnapshot('empty' in state ? undefined : state)),
       stateVersion: 1,
     })
-  })
+  }
 
   ctx.tools.register(defineTool({
     name: ENTER_PLAN_MODE,
@@ -394,6 +397,9 @@ async function presentReview(
         header: 'Plan approval',
         question: 'Review this plan. Auto and always-approve do not skip this step.',
         detail: displayPlanContent(plan),
+        // Official RPC rejects selected+custom together unless multiSelect.
+        // Notes / line comments ride in `custom`; the action stays in `selected`.
+        multiSelect: true,
         options: [
           { label: APPROVE_LABEL, description: 'Leave plan mode and start implementing.' },
           { label: REQUEST_CHANGES_LABEL, description: 'Stay in plan mode and send notes back to the model.' },
