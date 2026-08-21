@@ -10,9 +10,9 @@
 
 不改 DSH 源码。对照的是 Grok Build `dsh-v0.1.0-rc.8` 同期的 `PlanModeTracker`、`plan_mode_edit_gate`、`enter_plan_mode` / `exit_plan_mode`、审批面。文档：[xAI Plan Mode](https://docs.x.ai/build/features/plan-mode)。
 
-![`/plan` 出现芯片，审批卡打开，点 Approve 离开](docs/screenshots/plan-review.gif)
+![`/plan` 之后芯片出现在官方输入框上，接着打开审批卡](docs/screenshots/plan-review.gif)
 
-截图是本仓库的 `PlanChip` / `PlanReview` 在本地跑起来的画面，按钮和 Markdown 用的是官方 `@deepseek-ai/dsh-client-ui-primitives`。这台机器没把完整 Harness Web 拉起来，所以没有官方侧栏、会话列表那些壳。
+截图是装上这个插件之后的官方 DeepSeek Harness Web `0.1.0-rc.8`：侧栏、**Into the Unknown**、输入框。GIF 第一帧就是带 Plan 芯片的官方 composer，没有黑场。
 
 ## 你会看见什么
 
@@ -20,17 +20,15 @@
 
 DSH Web 没有 Shift+Tab。`/plan` 之后，输入框上出现 **Plan**。点 × 或打 `/grok-plan-leave` 退出。审批中芯片变成 **Plan approval**。
 
-![输入框上的 Plan 芯片](docs/screenshots/plan-chip.png)
+![官方输入框上的 Plan 芯片](docs/screenshots/plan-chip.png)
 
 ### 审批卡
 
 `exit_plan_mode` 和 `/view-plan` 打开同一张卡。划词可以写批注，下面还能给模型留说明。空 plan 也开这张面。
 
-![等待审批的 plan.md](docs/screenshots/plan-review.png)
+![`/view-plan` 打开的审批卡，盖在官方 WebUI 上](docs/screenshots/plan-review.png)
 
-![空 plan 也要你点一下](docs/screenshots/plan-review-empty.png)
-
-![在审批卡里给模型留说明](docs/screenshots/plan-review-comments.png)
+![空 plan 也要你点一下，可以给模型留说明](docs/screenshots/plan-review-comments.png)
 
 - **Approve** — 离开 Plan，按 `plan.md` 开始做
 - **Request changes** — 说明 / 行批注留下来，继续停在 Plan

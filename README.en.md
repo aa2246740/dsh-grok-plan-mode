@@ -10,9 +10,9 @@ Official DSH Plan is a prompt plus two buttons. It does **not** stop file writes
 
 No DSH source patch. The port tracks Grok Build at `dsh-v0.1.0-rc.8`: `PlanModeTracker`, `plan_mode_edit_gate`, `enter_plan_mode` / `exit_plan_mode`, and the approval surface. Spec: [xAI Plan Mode](https://docs.x.ai/build/features/plan-mode).
 
-![Plan chip, review card, Approve](docs/screenshots/plan-review.gif)
+![After `/plan`, the chip sits on the official composer; then the review card opens](docs/screenshots/plan-review.gif)
 
-The stills and GIF are this repo’s `PlanChip` and `PlanReview` running locally, with official `@deepseek-ai/dsh-client-ui-primitives` for Button and Markdown. Full Harness Web did not boot on the machine that took these, so you will not see the official sidebar or session list.
+These shots are official DeepSeek Harness Web `0.1.0-rc.8` after this plugin is installed: sidebar, **Into the Unknown**, the real input box. Frame 0 of the GIF is already that composer with the Plan chip. No black lead-in.
 
 ## What you see
 
@@ -20,17 +20,15 @@ The stills and GIF are this repo’s `PlanChip` and `PlanReview` running locally
 
 DSH Web has no Shift+Tab. After `/plan`, a **Plan** pill sits on the composer. Click × or run `/grok-plan-leave` to leave. During review it reads **Plan approval**.
 
-![Plan chip on the composer](docs/screenshots/plan-chip.png)
+![Plan chip on the official composer](docs/screenshots/plan-chip.png)
 
 ### Review card
 
 `exit_plan_mode` and `/view-plan` open the same card. Select lines to comment; leave notes for the model. An empty plan still opens it.
 
-![Review waiting on plan.md](docs/screenshots/plan-review.png)
+![`/view-plan` review card over the official WebUI](docs/screenshots/plan-review.png)
 
-![Empty plan still needs a click](docs/screenshots/plan-review-empty.png)
-
-![Notes on the review card](docs/screenshots/plan-review-comments.png)
+![Empty plan still needs a click; notes stay on the card](docs/screenshots/plan-review-comments.png)
 
 - **Approve** — leave Plan and implement `plan.md`
 - **Request changes** — keep Plan on, send notes / line comments back
