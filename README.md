@@ -42,37 +42,32 @@ bash 不闸。重定向可以写文件。Grok 文档写明闸的是编辑工具�
 
 ## 装
 
+不需要 dshx。默认走官方 `dsh`。
+
 先卸官方 Plan。`/plan`、`exit_plan_mode`、`conversation.input.plan` 都是单座，**不能双注册**。
 
-包已经声明了 `dsh.bundle`。从 Harness 源码树：
+```sh
+dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+或本地 clone：
 
 ```sh
-git clone https://github.com/aa2246740/dsh-grok-plan-mode.git \
-  /path/to/deepseek-harness/my-plugins/dsh-grok-plan-mode
-
-cd /path/to/deepseek-harness
-pnpm dsh plugin --profile web add link:./my-plugins/dsh-grok-plan-mode
-# 或：pnpm dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
-
-pnpm dsh web --no-open --port 3080
+git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
+dsh plugin --profile web add ./dsh-grok-plan-mode
 ```
+
+然后**重启这个 DSH Host**，**刷新页面**。
 
 `cordis.yml` 会禁用 host 上的 `ui-plan` / `plan-mode`，再插入本插件（`name: dsh-grok-plan-mode`，`__DSH_BOOT__` 才能扫到 `dsh.client`）。
 
 Web 还会在 preset `standard` / `code` / `cordis` 里把官方 `plan-mode` 再挂回去。只改 host 不够。把 [`overlays/preset.plan-off.yml`](overlays/preset.plan-off.yml) 合进这三份 preset 副本。那三份 Harness 文件本插件不替你改。
 
-不要再叠一层 dshx `--patch`：bundle 已经插过同一 id。
+不要再通过另一份 bundle 或 patch 重复挂载。
 
-从 git 装请用带 `lib/client.js` 的提交（已打好的是 RC8 lazy-CJS）。有 dshx `externalClientBundle` 的 Harness 里也可以 `pnpm build`。
+## Optional: dshx
 
-还在 dshx 车间、还没进 `dsh.profile.bundles` 时：
-
-```sh
-dshx check dsh-grok-plan-mode
-dshx verify-boot dsh-grok-plan-mode --keep
-```
-
-`verify-boot` 只证明 host `apply()` 和 HTTP。Client 行要靠上面的官方 bundle，`name` 必须是包名，不能是 `src/index.ts`。
+已经在用 Agent 对着一份 Harness 检出干活？先装 [dshx](https://github.com/aa2246740/dsh-external-plugin-devkit)，再把那个仓库和本仓库（`https://github.com/aa2246740/dsh-grok-plan-mode`）一起交给 Agent。后面它自己会装。
 
 ## 命令和工具
 

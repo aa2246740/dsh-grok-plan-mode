@@ -42,37 +42,32 @@ Bash is not gated. Redirects can write files. Grok’s docs gate edit tools, not
 
 ## Install
 
+You do **not** need dshx. The default path is official `dsh`.
+
 Unload official Plan first. `/plan`, `exit_plan_mode`, and `conversation.input.plan` are single seats. They **cannot be double-registered**.
 
-The package declares `dsh.bundle`. From a Harness tree:
+```sh
+dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+Or from a clone:
 
 ```sh
-git clone https://github.com/aa2246740/dsh-grok-plan-mode.git \
-  /path/to/deepseek-harness/my-plugins/dsh-grok-plan-mode
-
-cd /path/to/deepseek-harness
-pnpm dsh plugin --profile web add link:./my-plugins/dsh-grok-plan-mode
-# or: pnpm dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
-
-pnpm dsh web --no-open --port 3080
+git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
+dsh plugin --profile web add ./dsh-grok-plan-mode
 ```
+
+Then **restart that DSH Host** and **reload the page**.
 
 `cordis.yml` disables host `ui-plan` / `plan-mode` and inserts this plugin (`name: dsh-grok-plan-mode`, so `__DSH_BOOT__` sees `dsh.client`).
 
 Web remounts official `plan-mode` inside presets `standard` / `code` / `cordis`. Host-only is not enough. Merge [`overlays/preset.plan-off.yml`](overlays/preset.plan-off.yml) into those preset copies. This plugin will not edit those three Harness files for you.
 
-Do not stack a dshx `--patch` on top of the bundle — same plugin id twice.
+Do not mount the plugin again through another bundle or patch.
 
-Install from a commit that includes `lib/client.js` (RC8 lazy-CJS). Or `pnpm build` on a Harness that has dshx `externalClientBundle`.
+## Optional: dshx
 
-Still in the dshx workshop, not yet in `dsh.profile.bundles`:
-
-```sh
-dshx check dsh-grok-plan-mode
-dshx verify-boot dsh-grok-plan-mode --keep
-```
-
-`verify-boot` only proves host `apply()` and HTTP. The client row needs the official bundle install above; `name` must be the package name, not `src/index.ts`.
+Already using an Agent against a Harness checkout? Install [dshx](https://github.com/aa2246740/dsh-external-plugin-devkit), then give the Agent both that repo and this one (`https://github.com/aa2246740/dsh-grok-plan-mode`). It can take it from there.
 
 ## Commands and tools
 
