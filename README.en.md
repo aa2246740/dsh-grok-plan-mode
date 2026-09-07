@@ -2,49 +2,31 @@
 
 # dsh-grok-plan-mode
 
-Grok Build Plan Mode on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web.
+Replace official DeepSeek Harness Web Plan with Grok's hard gate.
 
-`/plan` locks the session to one writable file: that session’s `plan.md`. When the model calls `exit_plan_mode`, you get a review card — Approve, Request changes, or Quit. Auto / always-approve **do not skip it**.
+After `/plan`, the model can only edit this session's `plan.md`. `exit_plan_mode` opens a review card: approve, request changes, quit. auto / always-approve cannot skip it.
 
-Official DSH Plan is a prompt plus two buttons. It does **not** stop file writes. This plugin does.
+Official DSH Plan is a prompt plus two buttons. It does not block file writes. This plugin does. See [xAI Plan Mode](https://docs.x.ai/build/features/plan-mode).
 
-No DSH source patch. The port tracks Grok Build at `dsh-v0.1.0-rc.8`: `PlanModeTracker`, `plan_mode_edit_gate`, `enter_plan_mode` / `exit_plan_mode`, and the approval surface. Spec: [xAI Plan Mode](https://docs.x.ai/build/features/plan-mode).
+![Plan chip, then the review card](docs/screenshots/plan-review.gif)
 
-![After `/plan`, the chip sits on the official composer; then the review card opens](docs/screenshots/plan-review.gif)
+![Plan chip on the composer](docs/screenshots/plan-chip.png)
 
-These shots are official DeepSeek Harness Web `0.1.0-rc.8` after this plugin is installed: sidebar, **Into the Unknown**, the real input box. Frame 0 of the GIF is already that composer with the Plan chip. No black lead-in.
+![`/view-plan` opens the saved plan.md](docs/screenshots/plan-review.png)
 
-## What you see
+![Same card with notes](docs/screenshots/plan-review-comments.png)
 
-### Plan chip
+DSH Web has no Shift+Tab. After `/plan`, **Plan** appears on the composer. Click × or type `/grok-plan-leave` to leave. During review the chip becomes **Plan approval**.
 
-DSH Web has no Shift+Tab. After `/plan`, a **Plan** pill sits on the composer. Click × or run `/grok-plan-leave` to leave. During review it reads **Plan approval**.
+- Approve: leave Plan and implement `plan.md`
+- Request changes: keep notes and stay in Plan
+- Quit: drop the plan and leave Plan mode
 
-![Plan chip on the official composer](docs/screenshots/plan-chip.png)
-
-### Review card
-
-`exit_plan_mode` and `/view-plan` open the same card. It reads the `plan.md` already on disk. Select lines to comment; leave notes for the model. An empty plan still opens the card — the product is reviewing a written plan.
-
-![`/view-plan` on a written plan.md titled RATE-LIMIT POST /login, over the official WebUI](docs/screenshots/plan-review.png)
-
-![Same card, with a note in the Notes field](docs/screenshots/plan-review-comments.png)
-
-- **Approve** — leave Plan and implement `plan.md`
-- **Request changes** — keep Plan on, send notes / line comments back
-- **Quit** — drop the plan and turn Plan mode off
-
-### Edit gate
-
-While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` may only touch the session `plan.md`.
-
-Bash is not gated. Redirects can write files. Grok’s docs gate edit tools, not the shell; this port does not “fix” that. Subagents (`origin === 'subagent'` or `delegationDepth > 0`) do not inherit the parent gate.
+While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` can only touch this session's `plan.md`. bash is not gated. Subagents do not inherit the parent gate.
 
 ## Install
 
-You do **not** need dshx. The default path is official `dsh`.
-
-Unload official Plan first. `/plan`, `exit_plan_mode`, and `conversation.input.plan` are single seats. They **cannot be double-registered**.
+Unload official Plan first. `/plan`, `exit_plan_mode`, and `conversation.input.plan` are single-seat.
 
 ```sh
 dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
@@ -57,78 +39,30 @@ git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
 dsh plugin --profile web add ./dsh-grok-plan-mode
 ```
 
-Then **restart that DSH Host** and **reload the page**.
+Then restart that DSH Host and reload the page. `cordis.yml` disables host `ui-plan` / `plan-mode` and inserts this plugin.
 
-`cordis.yml` disables host `ui-plan` / `plan-mode` and inserts this plugin (`name: dsh-grok-plan-mode`, so `__DSH_BOOT__` sees `dsh.client`).
+Web presets `standard` / `code` / `cordis` still remount official `plan-mode`. Merge [`overlays/preset.plan-off.yml`](overlays/preset.plan-off.yml) into copies of those three presets. This plugin does not edit those Harness files. Do not mount a second copy through another bundle or patch.
 
-Web remounts official `plan-mode` inside presets `standard` / `code` / `cordis`. Host-only is not enough. Merge [`overlays/preset.plan-off.yml`](overlays/preset.plan-off.yml) into those preset copies. This plugin will not edit those three Harness files for you.
+## Commands
 
-Do not mount the plugin again through another bundle or patch.
-
-## Optional: dshx
-
-Already using an Agent against a Harness checkout? Install [dshx](https://github.com/aa2246740/dsh-external-plugin-devkit), then give the Agent both that repo and this one (`https://github.com/aa2246740/dsh-grok-plan-mode`). It can take it from there.
-
-## Commands and tools
-
-| Entry | What it does |
+| Entry | What |
 |---|---|
-| `/plan` | Enter; becomes Active on the next prompt |
+| `/plan` | Enter. Active on the next prompt |
 | `/plan <text>` | Enter and start this turn |
 | `/view-plan` `/show-plan` `/plan-view` | Open the saved plan |
 | chip × / `/grok-plan-leave` | Leave |
-| `enter_plan_mode` | Model enters when the task is ambiguous (not a permission dialog) |
-| `exit_plan_mode` | Read `plan.md` from disk and stop at review; tool args are empty |
+| `enter_plan_mode` | Model enters on its own |
+| `exit_plan_mode` | Read `plan.md` on disk and stop for review |
 
-## Files
+Files:
 
 ```
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan.md
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan_mode.json
 ```
 
-`DSH_HOME` moves the root. With no session path, fall back to `$cwd/.dsh/plan.md`. Missing files are created empty and **never truncated**.
+If there is no session path, it falls back to `$cwd/.dsh/plan.md`. Missing files are created empty. Existing content is never truncated.
 
-## vs official DSH Plan / Grok
+## License
 
-| Behavior | Grok | This plugin |
-|---|---|---|
-| State | `Inactive → Pending → Active → ExitPending` | Same |
-| Resume | `Pending` / `ExitPending` collapse; `plan_mode.json` | session event `grok-plan/state` + `plan_mode.json` above |
-| Plan file | session `plan.md`, else `.grok/plan.md` | session `plan.md`, else `$cwd/.dsh/plan.md` |
-| `/plan` | Next prompt; with text, start a turn | Same |
-| Edit gate | Active: only session `plan.md`; auto still blocked | Hard deny on `tools/pre-execute` |
-| bash | Not gated | Same |
-| Subagents | Parent gate does not inherit | Skip when `origin === 'subagent'` or `delegationDepth > 0` |
-| Review | Empty plan still opens; auto cannot skip | Web buttons and line comments; no TUI keybindings |
-
-## Not ported
-
-- TUI LineViewer / keys `a s c q Tab`. Same outcomes, Web buttons and selection comments.
-- Shift+Tab mode cycle. DSH composer has no seam for it.
-- Bash command inspection.
-- Official Goal stack. `/goal` is untouched.
-
-## Tests
-
-Tracker, gate, reminders, review copy, and plan-file seeding do not need DSH:
-
-```sh
-npm test
-```
-
-On a Harness checkout you can also run the RC8 service tests (no Web):
-
-```sh
-DSHX_HARNESS=/path/to/deepseek-harness \
-  pnpm --dir "$DSHX_HARNESS" exec vitest run \
-  --config my-plugins/dsh-grok-plan-mode/vitest.live.config.ts
-```
-
-## Source pointers
-
-- Grok state machine: `crates/codegen/xai-grok-shell/src/session/plan_mode.rs`
-- Grok edit gate: `crates/codegen/xai-grok-shell/src/session/acp_session_impl/tool_calls.rs` (`plan_mode_edit_gate`)
-- Grok enter/exit tools: `crates/codegen/xai-grok-tools/src/implementations/grok_build/{enter,exit}_plan_mode`
-- Grok approval view: `crates/codegen/xai-grok-pager/src/views/plan_approval_view.rs`
-- Official DSH Plan (replaced): `packages/plan/plan-mode`, `packages/client/ui-plan`
+MIT. See [LICENSE](LICENSE).
