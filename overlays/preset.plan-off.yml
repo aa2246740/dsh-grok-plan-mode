@@ -1,6 +1,4 @@
-# Official Plan is remounted inside each agent preset (`standard`, `code`,
-# `cordis`). `/plan` and `exit_plan_mode` cannot be double-registered.
-# Merge this row into those presets' agent.cordis.yml.
-
+# Legacy optional overlay; global replacement now handles every preset automatically.
+# Kept only for compatibility with older plugin versions.
 - id: plan-mode
   disabled: true

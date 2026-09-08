@@ -37,6 +37,11 @@ export interface PlanComment {
   text: string
 }
 
+export interface GrokPlanEventData extends PlanModeSnapshot {
+  plan_file_path: string
+  plan_has_content?: boolean
+}
+
 export interface GrokPlanProjection {
   state: PlanModeState
   active: boolean
@@ -46,6 +51,15 @@ export interface GrokPlanProjection {
   planContent: string | null
   planFilePath: string
   status: 'off' | 'plan' | 'plan approval'
+}
+
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    'grok-plan': GrokPlanEventData | null
+  }
+  interface SessionProjectionMap {
+    'grok-plan': GrokPlanProjection
+  }
 }
 
 export const REVIEW_QUESTION_ID = 'grok-plan-review'
@@ -73,10 +87,6 @@ export const DEFAULT_TOOL_HINTS: EnterPlanModeToolHints = {
   ask_user: 'ask_user_question',
   exit_plan: EXIT_PLAN_MODE,
   task: '',
-}
-
-export function officialPlanProjection(view: GrokPlanProjection): { active: boolean; pending: boolean } {
-  return { active: view.active, pending: view.pending }
 }
 
 export function planApprovalStatusLabel(hasPlan: boolean): string {

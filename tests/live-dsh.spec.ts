@@ -1,14 +1,15 @@
 /**
- * Live DSH package test: mounts the real plugin beside real RC8 services.
- * Run from a Harness checkout so @deepseek-ai/* resolve through tsconfig paths:
+ * Live DSH package test: mounts the real plugin beside real 0.1.2-rc.1 services.
+ * Run the project-local verification helper to use an isolated DSH_HOME:
  *
- *   DSHX_HARNESS=/path/to/deepseek-harness \
- *     pnpm --dir "$DSHX_HARNESS" exec vitest run \
- *     --config my-plugins/dsh-grok-plan-mode/vitest.live.config.ts
+ *   .dsh/skills/verify-grok-plan-mode/helpers/check.mjs check
+ *
+ * Uses installed public packages, a fixture Agent, and a test question answerer.
+ * Does not certify browser rendering, LLM behavior, or real filesystem policy.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { createUserMessage, CallId } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import { Session, SessionId, type UserMessage } from '@deepseek-ai/dsh-session'
@@ -30,6 +31,7 @@ async function agentWithSession(
     id: SessionId(id),
     createdAt: Date.now(),
     cwd: '/tmp/live-dsh-workspace',
+    isSeeded: false,
   })
   const agent = {
     id: SessionId(id),
@@ -48,7 +50,7 @@ async function agentWithSession(
   const agents = ctx.get('agents')
   if (agents === undefined) ctx.emit('agent/created', { agent })
   else {
-    agents.enter(agent)
+    agents.enter(agent, undefined)
     agents.announce(agent)
   }
   return agent
@@ -86,18 +88,31 @@ async function preStep(ctx: Context, agent: Agent & { session: Session }): Promi
   }
 }
 
+function pluginNoticeText(type: string, data: unknown): string | undefined {
+  if (type !== 'user/message') return undefined
+  if (typeof data !== 'object' || data === null) return undefined
+  if (!('source' in data) || !('content' in data)) return undefined
+  const { source, content } = data
+  if (typeof source !== 'object' || source === null || !('kind' in source)) return undefined
+  if (source.kind !== 'plugin' || !Array.isArray(content)) return undefined
+  return content.map(block => {
+    if (typeof block !== 'object' || block === null || !('text' in block)) return ''
+    return typeof block.text === 'string' ? block.text : ''
+  }).join('')
+}
+
 let calls = 0
-function exec(ctx: Context, name: string, args: unknown, agent?: Agent) {
+function exec(ctx: Context, toolName: string, args: unknown, agent?: Agent) {
   return ctx.tools.execute({
-    callId: CallId(`live-${++calls}`),
-    name,
+    callId: ToolCallId(`live-${++calls}`),
+    name: toolName,
     arguments: args,
     signal: new AbortController().signal,
     ...agent ? { agent } : {},
   })
 }
 
-describe('live DSH: grok-plan-mode', () => {
+describe('live DSH 0.1.2-rc.1: grok-plan-mode', () => {
   it('loads, registers /plan, and activates on the next pre-step', async () => {
     const ctx = await setup()
     const agent = await agentWithSession(ctx)
@@ -109,15 +124,30 @@ describe('live DSH: grok-plan-mode', () => {
       kind: 'success',
       text: 'Plan mode on. Active on your next prompt.',
     })
-    expect(agent.session.events.some(event => event.type === GROK_PLAN_EVENT)).toBe(true)
+    expect(agent.session.snapshotEvents().some(event => event.type === GROK_PLAN_EVENT)).toBe(true)
 
     await preStep(ctx, agent)
-    const last = [...agent.session.events].reverse().find(event => event.type === GROK_PLAN_EVENT)
+    const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
     expect(last?.data).toMatchObject({ state: 'Active' })
-    const notices = agent.session.events
-      .filter(event => event.type === 'user/message' && event.data.source.kind === 'plugin')
-      .map(event => event.data.content.map(block => 'text' in block ? block.text : '').join(''))
+    const notices = agent.session.snapshotEvents()
+      .flatMap(event => {
+        const text = pluginNoticeText(event.type, event.data)
+        return text === undefined ? [] : [text]
+      })
     expect(notices.some(text => text.includes('Plan mode is active'))).toBe(true)
+  })
+
+  it('treats /plan off as leave, not a planning prompt', async () => {
+    const ctx = await setup()
+    const agent = await agentWithSession(ctx)
+    await ctx.commands.execute(agent, '/plan', [], new AbortController().signal)
+    const result = await ctx.commands.execute(agent, '/plan off', [], new AbortController().signal)
+    expect(result?.result).toEqual({
+      kind: 'success',
+      text: 'Left plan mode.',
+    })
+    const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
+    expect(last?.data).toMatchObject({ state: 'Inactive' })
   })
 
   it('rejects non-plan-file edits while Active and allows bash', async () => {
@@ -141,8 +171,10 @@ describe('live DSH: grok-plan-mode', () => {
     expect(denied.isError).toBe(true)
     expect(denied.content.some(block => block.type === 'text' && block.text.includes('file edits are not allowed'))).toBe(true)
 
-    const last = [...agent.session.events].reverse().find(event => event.type === GROK_PLAN_EVENT)
-    const planPath = (last?.data as { plan_file_path: string }).plan_file_path
+    const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
+    const planPath = typeof last?.data === 'object' && last.data !== null && 'plan_file_path' in last.data
+      ? String(last.data.plan_file_path)
+      : ''
     const allowed = await exec(ctx, 'write', { file_path: planPath }, agent)
     expect(allowed.isError).toBe(false)
 
@@ -167,34 +199,30 @@ describe('live DSH: grok-plan-mode', () => {
 
   it('exit_plan_mode presents review and leaves on Approve', async () => {
     const ctx = await setup()
-    ctx.userQuestions.registerProvider({
-      ask: () => Promise.resolve({
-        answers: [{ id: 'grok-plan-review', selected: [APPROVE_LABEL] }],
-      }),
-    })
+    ctx.on('user-questions/request', () => Promise.resolve({
+      answers: [{ id: 'grok-plan-review', selected: [APPROVE_LABEL] }],
+    }))
     const agent = await agentWithSession(ctx)
     await exec(ctx, ENTER_PLAN_MODE, {}, agent)
     const exited = await exec(ctx, EXIT_PLAN_MODE, {}, agent)
     expect(exited.isError).toBe(false)
     const text = exited.content.map(block => block.type === 'text' ? block.text : '').join('')
     expect(text).toMatch(/approved|proceed/i)
-    const last = [...agent.session.events].reverse().find(event => event.type === GROK_PLAN_EVENT)
+    const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
     expect(last?.data).toMatchObject({ state: 'Inactive', awaiting_plan_approval: false })
   })
 
   it('exit_plan_mode stays in plan when Request changes includes notes', async () => {
     const ctx = await setup()
-    ctx.userQuestions.registerProvider({
-      ask: (request) => {
-        expect(request.questions[0]?.multiSelect).toBe(true)
-        return Promise.resolve({
-          answers: [{
-            id: 'grok-plan-review',
-            selected: [REQUEST_CHANGES_LABEL],
-            custom: 'need more detail on tests',
-          }],
-        })
-      },
+    ctx.on('user-questions/request', (request) => {
+      expect(request.questions[0]?.multiSelect).toBe(true)
+      return Promise.resolve({
+        answers: [{
+          id: 'grok-plan-review',
+          selected: [REQUEST_CHANGES_LABEL],
+          custom: 'need more detail on tests',
+        }],
+      })
     })
     const agent = await agentWithSession(ctx)
     await exec(ctx, ENTER_PLAN_MODE, {}, agent)
@@ -202,7 +230,33 @@ describe('live DSH: grok-plan-mode', () => {
     expect(exited.isError).toBe(true)
     expect(exited.content.map(block => block.type === 'text' ? block.text : '').join(''))
       .toMatch(/need more detail on tests/)
-    const last = [...agent.session.events].reverse().find(event => event.type === GROK_PLAN_EVENT)
+    const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
     expect(last?.data).toMatchObject({ state: 'Active', awaiting_plan_approval: false })
+  })
+
+  it('rejects a late approval after /plan off instead of authorizing implementation', async () => {
+    const ctx = await setup()
+    const agent = await agentWithSession(ctx, 'late-approval')
+    ctx.on('user-questions/request', async () => {
+      const left = await ctx.commands.execute(agent, '/plan off', [], new AbortController().signal)
+      expect(left?.result.kind).toBe('success')
+      return { answers: [{ id: 'grok-plan-review', selected: [APPROVE_LABEL] }] }
+    })
+    await exec(ctx, ENTER_PLAN_MODE, {}, agent)
+    const result = await exec(ctx, EXIT_PLAN_MODE, {}, agent)
+    expect(result.isError).toBe(true)
+  })
+
+  it('rejects contradictory multi-select approval instead of trusting the first label', async () => {
+    const ctx = await setup()
+    const agent = await agentWithSession(ctx, 'ambiguous-approval')
+    ctx.on('user-questions/request', async () => ({
+      answers: [{ id: 'grok-plan-review', selected: [APPROVE_LABEL, REQUEST_CHANGES_LABEL] }],
+    }))
+    await exec(ctx, ENTER_PLAN_MODE, {}, agent)
+    const result = await exec(ctx, EXIT_PLAN_MODE, {}, agent)
+    expect(result.isError).toBe(true)
+    expect(ctx.sessionProjections.stateOf(agent.session, 'grok-plan'))
+      .toMatchObject({ state: 'Active', awaiting_plan_approval: false })
   })
 })

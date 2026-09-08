@@ -1,26 +1,10 @@
-export const en = {
-  'chip.plan': 'Plan',
-  'chip.approval': 'Plan approval',
-  'chip.on.aria': 'Plan mode is on. Click to leave.',
-  'chip.approval.aria': 'Plan approval is open. Click to leave plan mode.',
-  'review.header': 'Plan approval',
-  'review.empty': 'No plan written — approve or request changes',
-  'review.waiting': 'Waiting on plan approval',
-  'review.approve': 'Approve',
-  'review.changes': 'Request changes',
-  'review.quit': 'Quit',
-  'review.comment': 'Comment on selection',
-  'review.notes': 'Notes for the agent',
-  'review.notes.placeholder': 'What should change?',
-  'review.comment.placeholder': 'Comment on the selected lines',
-  'review.addComment': 'Add comment',
-}
-
 export const zh = {
-  'chip.plan': 'Plan',
+  'chip.label': 'Plan',
   'chip.approval': 'Plan approval',
   'chip.on.aria': '计划模式已开启。点击退出。',
+  'chip.on.title': '计划模式已开启 — 点击退出（/plan off）',
   'chip.approval.aria': '计划审批已打开。点击退出计划模式。',
+  'chip.exitFailed': '退出计划模式失败',
   'review.header': '计划审批',
   'review.empty': '还没有写计划 — 批准或要求修改',
   'review.waiting': '等待计划审批',
@@ -32,6 +16,34 @@ export const zh = {
   'review.notes.placeholder': '希望怎么改？',
   'review.comment.placeholder': '对选中行的批注',
   'review.addComment': '添加批注',
-}
+  'review.lines': '点选行号来批注',
+  'copy': '复制',
+  'copied': '已复制',
+  'markdown.footnotes': '脚注',
+} satisfies Record<string, string>
 
-export type GrokPlanKey = keyof typeof en
+export type GrokPlanKey = keyof typeof zh
+
+export const en = {
+  'chip.label': 'Plan',
+  'chip.approval': 'Plan approval',
+  'chip.on.aria': 'Plan mode on. Click to leave.',
+  'chip.on.title': 'Plan mode on — click to leave (/plan off)',
+  'chip.approval.aria': 'Plan approval is open. Click to leave plan mode.',
+  'chip.exitFailed': 'Failed to exit plan mode',
+  'review.header': 'Plan approval',
+  'review.empty': 'No plan written — approve or request changes',
+  'review.waiting': 'Waiting on plan approval',
+  'review.approve': 'Approve',
+  'review.changes': 'Request changes',
+  'review.quit': 'Quit',
+  'review.comment': 'Comment on selection',
+  'review.notes': 'Notes for the agent',
+  'review.notes.placeholder': 'What should change?',
+  'review.comment.placeholder': 'Comment on the selected lines',
+  'review.addComment': 'Add comment',
+  'review.lines': 'Click line numbers to comment',
+  'copy': 'Copy',
+  'copied': 'Copied',
+  'markdown.footnotes': 'Footnotes',
+} satisfies Record<GrokPlanKey, string>

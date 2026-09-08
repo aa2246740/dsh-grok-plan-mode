@@ -1,22 +1,25 @@
-import { existsSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-const here = dirname(fileURLToPath(import.meta.url))
-const candidates = [
-  process.env.DSHX_HARNESS ? resolve(process.env.DSHX_HARNESS, 'tools/dshx/src/client-build.js') : '',
-  resolve(here, '../../tools/dshx/src/client-build.js'),
-  resolve(process.cwd(), '../../tools/dshx/src/client-build.js'),
-  resolve(process.cwd(), 'tools/dshx/src/client-build.js'),
-].filter(Boolean)
-
-const clientBuild = candidates.find(path => existsSync(path))
-if (clientBuild === undefined) {
-  throw new Error(`dshx client-build.js not found. Copy this repo to <harness>/my-plugins/dsh-grok-plan-mode or set DSHX_HARNESS. Looked in:\n${candidates.join('\n')}`)
+function resolveHarness() {
+  const configured = process.env.DSHX_HARNESS?.trim()
+  const configPath = join(homedir(), '.config/dshx/harness')
+  const recorded = existsSync(configPath) ? readFileSync(configPath, 'utf8').trim() : undefined
+  const selected = configured === undefined || configured.length === 0 ? recorded : configured
+  if (!selected) {
+    throw new Error('dshx client build requires a Harness root from DSHX_HARNESS or ~/.config/dshx/harness')
+  }
+  return resolve(selected)
 }
 
-const { externalClientBundle } = await import(pathToFileURL(clientBuild).href)
+const harness = resolveHarness()
+process.env.DSHX_HARNESS = harness
+const adapter = join(harness, 'tools/dshx/src/client-build.js')
+if (!existsSync(adapter)) throw new Error(`dshx client build adapter not found: ${adapter}`)
+const { externalClientBundle } = await import(pathToFileURL(adapter).href)
 
-export default externalClientBundle('dsh-grok-plan-mode', ['lib/types/index.js'], {
+export default externalClientBundle('dsh-grok-plan-mode', ['src/index.ts'], {
   clientEntry: 'src/client/index.tsx',
 })

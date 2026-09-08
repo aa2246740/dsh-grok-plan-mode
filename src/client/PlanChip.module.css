@@ -13,6 +13,7 @@
   padding: 2px 8px;
   border: none;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
@@ -34,6 +35,12 @@
   color: var(--dsw-alias-state-warn-primary);
 }
 
+.chip:focus-visible,
+.approval:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-warn-label);
+  outline-offset: 2px;
+}
+
 .chip:disabled,
 .approval:disabled {
   opacity: 0.6;
@@ -43,10 +50,18 @@
 .close {
   display: inline-flex;
   align-items: center;
+  color: currentColor;
 }
 
 .error {
   color: var(--dsw-alias-state-error-primary);
   font-size: 12px;
   line-height: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .approval {
+    transition: none;
+  }
 }

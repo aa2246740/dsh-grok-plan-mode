@@ -1,26 +1,28 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
+import type { CommandInvocation } from '@deepseek-ai/dsh-commands'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
+import type {} from '@deepseek-ai/dsh-session-projection'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { PreToolDecision } from '@deepseek-ai/dsh-tools'
 import { UserQuestionError } from '@deepseek-ai/dsh-user-questions'
-import { z as zod } from 'zod'
 import { classifyToolAccess, isPlanningAgent, planModeEditGate, resolveEditPath } from '../gate.ts'
+import type { AccessKind } from '../gate.ts'
 import {
-  foldGrokPlan,
   GROK_PLAN_EVENT,
+  legacyPlanNeedsMigration,
   hasOpenTurn,
-  officialPlanView,
-  viewFromSnapshot,
 } from '../fold.ts'
 import {
   planFileHasContent,
+  planFileHasContentSync,
   probeOrCreateEmptyPlanFile,
   readPlanFile,
   resolvePlanFilePath,
   writePlanModeJson,
 } from '../plan-file.ts'
+import { grokPlanProjectionDefinition } from '../projection.ts'
 import {
   ENTER_PLAN_MODE_DESCRIPTION,
   ENTERED_PLAN_MODE_MESSAGE,
@@ -40,7 +42,7 @@ import {
 } from '../reminders.ts'
 import { abandonedPlanMessage, displayPlanContent, resumeActionFor, revisePlanMessage } from '../review.ts'
 import { PlanModeTracker } from '../tracker.ts'
-import type { EnterPlanModeToolHints, GrokPlanProjection, PlanApprovalOutcome } from '../types.ts'
+import type { EnterPlanModeToolHints, PlanApprovalOutcome } from '../types.ts'
 import {
   APPROVE_LABEL,
   DEFAULT_TOOL_HINTS,
@@ -62,14 +64,8 @@ declare module '@deepseek-ai/dsh-session/types' {
       pending_exit_reminder: boolean
       awaiting_plan_approval: boolean
       plan_file_path: string
+      plan_has_content?: boolean
     }
-  }
-}
-
-declare module '@deepseek-ai/dsh-session-projection/types' {
-  interface SessionProjectionMap {
-    plan: { active: boolean; pending: boolean }
-    'grok-plan': GrokPlanProjection
   }
 }
 
@@ -84,27 +80,33 @@ export function applyGrokPlanMode(ctx: Context): void {
     const existing = trackers.get(agent.session)
     if (existing !== undefined) return existing
     const paths = pathsOf(agent)
-    const folded = foldGrokPlan(agent.session.events)
-    const tracker = folded === undefined
-      ? new PlanModeTracker(paths.sessionDir)
-      : PlanModeTracker.fromSnapshot(paths.sessionDir, folded)
+    const folded = ctx.sessionProjections.stateOf(agent.session, 'grok-plan')
+    const tracker = folded === undefined || folded === null
+      ? new PlanModeTracker(paths.sessionDir, paths.planFilePath)
+      : PlanModeTracker.fromSnapshot(paths.sessionDir, folded, folded.plan_file_path)
     trackers.set(agent.session, tracker)
+    if (legacyPlanNeedsMigration(agent.session.snapshotEvents())) {
+      tracker.activateFromTool()
+      persist(agent)
+    }
     return tracker
   }
 
   const persist = (agent: Agent): void => {
     const tracker = trackerOf(agent)
+    const planFilePath = tracker.planFilePath()
     const data = {
       ...tracker.snapshot(),
-      plan_file_path: tracker.planFilePath(),
+      plan_file_path: planFilePath,
+      plan_has_content: planFileHasContentSync(planFilePath),
     }
     agent.session.append(GROK_PLAN_EVENT, data)
     void writePlanModeJson(pathsOf(agent).sessionDir, data).catch((error: unknown) => {
-      ctx.logger?.warn?.('dsh-grok-plan-mode: failed to write plan_mode.json: %o', error)
+      ctx.logger.warn('dsh-grok-plan-mode: failed to write plan_mode.json: %o', error)
     })
   }
 
-  const hintsOf = (): ToolHints => toolHints(ctx)
+  ctx.on('agent/created', ({ agent }) => { trackerOf(agent) })
 
   ctx.on('agent/session-start', ({ agent, source }) => {
     const tracker = trackerOf(agent)
@@ -125,7 +127,7 @@ export function applyGrokPlanMode(ctx: Context): void {
     if (decision.kind === 'reject' || signal.aborted) return decision
     const tracker = trackerOf(agent)
     const injections: UserMessage[] = []
-    const hints = hintsOf()
+    const hints = toolHints(ctx, agent)
 
     if (tracker.getState() === 'Pending') {
       const reentry = tracker.isReentry()
@@ -175,8 +177,8 @@ export function applyGrokPlanMode(ctx: Context): void {
     if (!isPlanningAgent(agent.session.header)) return next()
     const tracker = trackerOf(agent)
     const access = classifyToolAccess({ name: exec.name, arguments: exec.arguments })
-    const resolved = access.kind === 'edit'
-      ? { kind: 'edit' as const, path: resolveEditPath(access.path, agent.session.header.cwd) }
+    const resolved: AccessKind = access.kind === 'edit'
+      ? { kind: 'edit', path: resolveEditPath(access.path, agent.session.header.cwd) }
       : access
     if (planModeEditGate(tracker, resolved) === 'reject_non_plan_file') {
       return { kind: 'deny', reason: planModeEditRejected(tracker.planFilePath()) }
@@ -185,7 +187,12 @@ export function applyGrokPlanMode(ctx: Context): void {
   })
 
   {
-    const register = (name: string, description: string, hint: string, handler: typeof handlePlan) => {
+    const register = (
+      name: string,
+      description: string,
+      hint: string,
+      handler: Parameters<typeof ctx.commands.register>[0]['handler'],
+    ) => {
       ctx.commands.register({
         name,
         description,
@@ -196,8 +203,25 @@ export function applyGrokPlanMode(ctx: Context): void {
       })
     }
 
-    const handlePlan = ({ agent, rawInput, attachments }) => {
+    const leave = ({ agent }: { agent: Agent }) => {
+      const tracker = trackerOf(agent)
+      reviews.get(tracker)?.abort()
+      if (tracker.getState() === 'Inactive' && !tracker.isAwaitingPlanApproval()) {
+        return { kind: 'success' as const, text: 'Plan mode is already off.' }
+      }
+      tracker.userExit(hasOpenTurn(agent.session.snapshotEvents()))
+      persist(agent)
+      return { kind: 'success' as const, text: 'Left plan mode.' }
+    }
+
+    const handlePlan = ({ agent, rawInput, attachments }: CommandInvocation) => {
       const message = rawInput.trim()
+      if (message === 'off') {
+        if (attachments.length > 0) {
+          return { kind: 'error' as const, text: 'Image attachments cannot accompany /plan off.' }
+        }
+        return leave({ agent })
+      }
       const tracker = trackerOf(agent)
       if (message === '' && attachments.length === 0) {
         if (tracker.getState() === 'Inactive' || tracker.getState() === 'ExitPending') {
@@ -219,20 +243,10 @@ export function applyGrokPlanMode(ctx: Context): void {
       return { kind: 'success' as const, text: 'Plan mode on. Starting this turn under plan mode.' }
     }
 
-    register('plan', 'Enter plan mode', '[description]', handlePlan)
-
-    const leave = ({ agent }) => {
-      const tracker = trackerOf(agent)
-      if (tracker.getState() === 'Inactive' && !tracker.isAwaitingPlanApproval()) {
-        return { kind: 'success' as const, text: 'Plan mode is already off.' }
-      }
-      tracker.userExit(hasOpenTurn(agent.session.events))
-      persist(agent)
-      return { kind: 'success' as const, text: 'Left plan mode.' }
-    }
+    register('plan', 'Enter or leave plan mode', '[off|message]', handlePlan)
     register('grok-plan-leave', 'Leave plan mode', '', leave)
 
-    const viewPlan = async ({ agent, signal }) => {
+    const viewPlan = async ({ agent, signal }: { agent: Agent; signal: AbortSignal }) => {
       const tracker = trackerOf(agent)
       if (tracker.getState() === 'Inactive' && !tracker.isAwaitingPlanApproval()) {
         return { kind: 'error' as const, text: 'No plan mode session is active. Use /plan first.' }
@@ -263,40 +277,7 @@ export function applyGrokPlanMode(ctx: Context): void {
     }
   }
 
-  {
-    const projectionCtx = ctx
-    type UnitState = ReturnType<typeof foldGrokPlan> | { readonly empty: true }
-    const grokPlanSchema = zod.object({
-      state: zod.enum(['Inactive', 'Pending', 'Active', 'ExitPending']),
-      active: zod.boolean(),
-      pending: zod.boolean(),
-      awaitingApproval: zod.boolean(),
-      hasPlan: zod.boolean(),
-      planContent: zod.string().nullable(),
-      planFilePath: zod.string(),
-      status: zod.enum(['off', 'plan', 'plan approval']),
-    })
-    const officialPlanSchema = zod.object({
-      active: zod.boolean(),
-      pending: zod.boolean(),
-    })
-    projectionCtx.sessionProjections.register({
-      key: 'grok-plan',
-      schema: grokPlanSchema,
-      init: (): UnitState => ({ empty: true }),
-      apply: (state: UnitState, event) => event.type === GROK_PLAN_EVENT ? event.data : state,
-      view: (state: UnitState) => viewFromSnapshot('empty' in state ? undefined : state),
-      stateVersion: 1,
-    })
-    projectionCtx.sessionProjections.register({
-      key: 'plan',
-      schema: officialPlanSchema,
-      init: (): UnitState => ({ empty: true }),
-      apply: (state: UnitState, event) => event.type === GROK_PLAN_EVENT ? event.data : state,
-      view: (state: UnitState) => officialPlanView(viewFromSnapshot('empty' in state ? undefined : state)),
-      stateVersion: 1,
-    })
-  }
+  ctx.sessionProjections.register(grokPlanProjectionDefinition)
 
   ctx.tools.register(defineTool({
     name: ENTER_PLAN_MODE,
@@ -318,10 +299,10 @@ export function applyGrokPlanMode(ctx: Context): void {
       const agent = exec.agent
       if (agent === undefined) throw new Error(`${ENTER_PLAN_MODE} requires a calling agent`)
       const tracker = trackerOf(agent)
-      tracker.activateFromTool()
+      const changed = tracker.activateFromTool()
       const seed = await probeOrCreateEmptyPlanFile(tracker.planFilePath())
-      persist(agent)
-      const hints = hintsOf()
+      if (changed) persist(agent)
+      const hints = toolHints(ctx, agent)
       const text = formatEnterPlanMode({
         message: ENTERED_PLAN_MODE_MESSAGE,
         planFilePath: tracker.planFilePath(),
@@ -358,9 +339,8 @@ export function applyGrokPlanMode(ctx: Context): void {
       if (!tracker.isActive()) {
         throw new Error(`${EXIT_PLAN_MODE} is only available in plan mode`)
       }
-      const { outcome, feedback } = await presentReview(ctx, agent, tracker, exec.signal, persist)
+      const { outcome, feedback, plan: content } = await presentReview(ctx, agent, tracker, exec.signal, persist)
       if (outcome === 'approved') {
-        const content = await readPlanFile(tracker.planFilePath())
         const message = content === undefined
           ? EXIT_EMPTY_PLAN_MESSAGE
           : formatExitPlanReady({
@@ -374,7 +354,11 @@ export function applyGrokPlanMode(ctx: Context): void {
       throw new Error(revisePlanMessage(feedback))
     },
   }))
+  for (const agent of ctx.get('agents')?.list() ?? []) trackerOf(agent)
 }
+
+// Request lifetimes are not persisted: restored state cannot resurrect a human decision.
+const reviews = new WeakMap<PlanModeTracker, AbortController>()
 
 async function presentReview(
   ctx: Context,
@@ -382,23 +366,33 @@ async function presentReview(
   tracker: PlanModeTracker,
   signal: AbortSignal | undefined,
   persist: (agent: Agent) => void,
-): Promise<{ outcome: PlanApprovalOutcome; feedback: string }> {
+): Promise<{ outcome: PlanApprovalOutcome; feedback: string; plan: string | undefined }> {
   const questions = ctx.get('userQuestions')
   if (questions === undefined) {
     throw new Error('no interactive client is available to review the plan; stay in plan mode')
   }
-  const plan = await readPlanFile(tracker.planFilePath())
-  tracker.setAwaitingPlanApproval(true)
-  persist(agent)
+  if (!tracker.isActive()) throw new Error('Plan mode must be active before review.')
+  if (reviews.has(tracker)) throw new Error('A plan review is already open.')
+  const controller = new AbortController()
+  reviews.set(tracker, controller)
+  const lifetime = signal === undefined ? controller.signal : AbortSignal.any([signal, controller.signal])
+  const assertCurrent = () => {
+    if (lifetime.aborted || !tracker.isActive()) throw new Error('Plan review expired; no implementation was approved.')
+  }
   try {
+    const plan = await readPlanFile(tracker.planFilePath())
+    assertCurrent()
+    tracker.setAwaitingPlanApproval(true)
+    persist(agent)
     const answer = await questions.ask({
       questions: [{
         id: REVIEW_QUESTION_ID,
         header: 'Plan approval',
         question: 'Review this plan. Auto and always-approve do not skip this step.',
         detail: displayPlanContent(plan),
-        // Official RPC rejects selected+custom together unless multiSelect.
-        // Notes / line comments ride in `custom`; the action stays in `selected`.
+        // Official plan-review intent is binary and single-select. Grok's
+        // Approve / Request changes / Quit plus notes stay a generic question
+        // so the plugin composer can intercept it.
         multiSelect: true,
         options: [
           { label: APPROVE_LABEL, description: 'Leave plan mode and start implementing.' },
@@ -407,15 +401,27 @@ async function presentReview(
         ],
       }],
       agent,
-      signal,
+      signal: lifetime,
     })
-    const item = answer.answers.find(entry => entry.id === REVIEW_QUESTION_ID)
-    const label = item?.selected[0] ?? ''
+    assertCurrent()
+    const item = answer.answers[0]
+    if (answer.answers.length !== 1 || item?.id !== REVIEW_QUESTION_ID || item.selected.length !== 1) {
+      throw new Error('Choose exactly one plan review action; no implementation was approved.')
+    }
+    const label = item.selected[0]
+    if (label !== APPROVE_LABEL && label !== REQUEST_CHANGES_LABEL && label !== QUIT_LABEL) {
+      throw new Error('Unknown plan review action; no implementation was approved.')
+    }
+    if (label === APPROVE_LABEL) {
+      const currentPlan = await readPlanFile(tracker.planFilePath())
+      assertCurrent()
+      if (currentPlan !== plan) throw new Error('The plan changed during review. Review it again before approval.')
+    }
     const outcome = outcomeFromLabel(label)
-    const feedback = item?.custom ?? ''
-    applyOutcome(agent, tracker, outcome, feedback)
+    const feedback = outcome === 'cancelled' ? item?.custom ?? '' : ''
+    applyOutcome(tracker, outcome, feedback)
     persist(agent)
-    return { outcome, feedback }
+    return { outcome, feedback, plan }
   } catch (error) {
     tracker.setAwaitingPlanApproval(false)
     persist(agent)
@@ -426,11 +432,12 @@ async function presentReview(
       throw new Error('no interactive client is available to review the plan; stay in plan mode')
     }
     throw error
+  } finally {
+    reviews.delete(tracker)
   }
 }
 
 function applyOutcome(
-  agent: Agent,
   tracker: PlanModeTracker,
   outcome: PlanApprovalOutcome,
   feedback: string,
@@ -449,7 +456,7 @@ function applyOutcome(
 
 function enterFromCommand(agent: Agent, tracker: PlanModeTracker): void {
   tracker.enterPending()
-  if (hasOpenTurn(agent.session.events) && tracker.getState() === 'Pending') {
+  if (hasOpenTurn(agent.session.snapshotEvents()) && tracker.getState() === 'Pending') {
     const text = wrapSystemReminder(planModeReminderFull({
       planPath: tracker.planFilePath(),
       planHasContent: false,
@@ -470,21 +477,17 @@ function pathsOf(agent: Agent): ReturnType<typeof resolvePlanFilePath> {
   })
 }
 
-function toolHints(ctx: Context): ToolHints {
+function toolHints(ctx: Context, agent: Agent): ToolHints {
   const names = new Set<string>()
-  try {
-    const schemas = (ctx as { tools?: { schemas?: () => readonly { name: string }[] } }).tools?.schemas?.()
-    for (const item of schemas ?? []) names.add(item.name)
-  } catch {
-    // Catalog read is best-effort; reminders fall back to Grok defaults.
-  }
+  const tools = agent.ctx.get('tools') ?? ctx.tools
+  for (const item of tools.schemas()) names.add(item.name)
   const edit = names.has('str_replace_editor')
     ? 'str_replace_editor'
     : names.has('edit')
       ? 'edit'
       : names.has('write')
         ? 'write'
-        : 'str_replace_editor'
+        : 'edit'
   return {
     ...DEFAULT_TOOL_HINTS,
     ask_user: names.has('ask_user_question') ? 'ask_user_question' : DEFAULT_TOOL_HINTS.ask_user,
@@ -506,8 +509,8 @@ function notice(text: string): UserMessage {
 }
 
 function findAgent(ctx: Context, session: Session): Agent | undefined {
-  const agents = (ctx as { get: (name: string) => { get?: (id: string) => Agent | undefined } | undefined }).get('agents')
-  return agents?.get?.(session.id)
+  const agents = ctx.get('agents')
+  return agents?.get(session.id)
 }
 
 function errorMessage(error: unknown): string {

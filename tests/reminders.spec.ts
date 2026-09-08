@@ -35,6 +35,14 @@ describe('reminders', () => {
     assert.equal(text.includes('A plan file exists at'), false)
   })
 
+  it('defaults the DSH 0.1.2 edit tool name', () => {
+    const text = planModeReminderFull({
+      planPath: '/tmp/plan.md',
+      planHasContent: false,
+    })
+    assert.match(text, /using the edit tool/)
+  })
+
   it('resolves custom tool names and has no subagent or phase workflow', () => {
     const text = planModeReminderFull({
       planPath: '/tmp/plan.md',

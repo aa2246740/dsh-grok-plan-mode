@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -24,27 +25,38 @@ export function sessionDir(input: {
 }
 
 export function fallbackPlanPath(cwd: string | undefined): string {
-  if (cwd === undefined || cwd.trim() === '') return '.dsh/plan.md'
-  return join(cwd, '.dsh', 'plan.md')
+  if (cwd === undefined || cwd.trim() === '') return '.grok/plan.md'
+  return join(cwd, '.grok', 'plan.md')
 }
 
-/** Grok: session dir `plan.md` first; cwd `.grok/plan.md` if no session path. */
+/** Grok: session dir `plan.md` first; workspace `.grok/plan.md` if no cwd/session path. */
 export function resolvePlanFilePath(input: {
   sessionId: string
   cwd?: string
   home?: string
 }): { sessionDir: string; planFilePath: string; fallbackPath: string } {
   const dir = sessionDir(input)
+  const fallback = fallbackPlanPath(input.cwd)
+  const hasCwd = input.cwd !== undefined && input.cwd.trim() !== ''
   return {
     sessionDir: dir,
-    planFilePath: join(dir, 'plan.md'),
-    fallbackPath: fallbackPlanPath(input.cwd),
+    planFilePath: hasCwd ? join(dir, 'plan.md') : fallback,
+    fallbackPath: fallback,
   }
 }
 
 export async function planFileHasContent(path: string): Promise<boolean> {
   try {
     const info = await stat(path)
+    return info.isFile() && info.size > 0
+  } catch {
+    return false
+  }
+}
+
+export function planFileHasContentSync(path: string): boolean {
+  try {
+    const info = statSync(path)
     return info.isFile() && info.size > 0
   } catch {
     return false

@@ -10,7 +10,7 @@ export function planModeReminderFull(input: {
   planHasContent: boolean
   tools?: Partial<EnterPlanModeToolHints> & { edit?: string }
 }): string {
-  const edit = input.tools?.edit ?? 'str_replace_editor'
+  const edit = input.tools?.edit ?? 'edit'
   const ask = input.tools?.ask_user ?? DEFAULT_TOOL_HINTS.ask_user
   const exit = input.tools?.exit_plan ?? DEFAULT_TOOL_HINTS.exit_plan
   const planBlock = input.planHasContent

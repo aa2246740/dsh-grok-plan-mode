@@ -2,7 +2,7 @@
 
 # dsh-grok-plan-mode
 
-把 DeepSeek Harness Web 的官方 Plan 换成 Grok 那一套硬闸。
+把 DeepSeek Harness Web 0.1.2-rc.1 的官方 Plan 换成 Grok 那一套硬闸。
 
 `/plan` 之后，模型只能改这个 session 的 `plan.md`。调用 `exit_plan_mode` 时会出现审批卡：批准、要求修改、放弃。auto / always-approve 跳不过去。
 
@@ -16,7 +16,7 @@
 
 ![同一张卡，Notes 里写了说明](docs/screenshots/plan-review-comments.png)
 
-DSH Web 没有 Shift+Tab。`/plan` 之后输入框上出现 **Plan**。点 × 或打 `/grok-plan-leave` 退出。审批中芯片变成 **Plan approval**。
+DSH Web 没有 Shift+Tab。`/plan` 之后输入框上出现 **Plan**。点 × 或打 `/plan off` 退出。审批中芯片变成 **Plan approval**。
 
 - Approve：离开 Plan，按 `plan.md` 开始做
 - Request changes：说明和行批注留下来，继续停在 Plan
@@ -39,9 +39,9 @@ git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
 dsh plugin --profile web add ./dsh-grok-plan-mode
 ```
 
-然后重启这个 DSH Host，刷新页面。`cordis.yml` 会禁用 host 上的 `ui-plan` / `plan-mode`，再插入本插件。
+首次安装按 DSHX 的 manifest 激活判断操作；已加载本 bundle 的 Host 可用支持 bundle 定位的 DSHX 做同 PID 服务端热更新，无需重复安装或重启。`cordis.yml` 会禁用 host 上的 `ui-plan` / `plan-mode`，再插入本插件。
 
-Web 还会在 preset `standard` / `code` / `cordis` 里把官方 `plan-mode` 再挂回去。把 [`overlays/preset.plan-off.yml`](overlays/preset.plan-off.yml) 合进这三份 preset 副本。那三份 Harness 文件本插件不替你改。不要再通过另一份 bundle 或 patch 重复挂载。
+插件现在统一接管所有模式的 Plan：标准、PTC、极简、创造模式、Creator Mode+ 以及后续自定义预设。通过 Cordis 生命周期阻止预设重新激活官方 Plan，保留 Loader 中禁用行；不需要复制或修改各份预设。已运行的官方 Plan 也会被替换，旧的活动计划保守迁移为 Grok 活动计划，不会自动批准。卸载时恢复本插件接管的运行行。
 
 ## 命令
 
@@ -49,8 +49,9 @@ Web 还会在 preset `standard` / `code` / `cordis` 里把官方 `plan-mode` 再
 |---|---|
 | `/plan` | 进入，下次提问才 Active |
 | `/plan <text>` | 进入并开这一轮 |
+| `/plan off` | 退出（和芯片 × 一样） |
 | `/view-plan` `/show-plan` `/plan-view` | 打开已保存的 plan |
-| 芯片 × / `/grok-plan-leave` | 退出 |
+| `/grok-plan-leave` | 退出（别名） |
 | `enter_plan_mode` | 模型自己进入 |
 | `exit_plan_mode` | 读磁盘上的 `plan.md`，停在审批 |
 
@@ -61,7 +62,7 @@ Web 还会在 preset `standard` / `code` / `cordis` 里把官方 `plan-mode` 再
 ~/.dsh/sessions/<urlencoded-cwd>/<session-id>/plan_mode.json
 ```
 
-没有 session 路径时回退 `$cwd/.dsh/plan.md`。没有就建空文件，从不截断已有内容。
+没有 cwd 时回退 `.grok/plan.md`（和 Grok Build 一样）。没有就建空文件，从不截断已有内容。
 
 ## 许可
 

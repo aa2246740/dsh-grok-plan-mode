@@ -20,17 +20,17 @@ export class PlanModeTracker {
   private pendingActivation: PendingActivation | undefined
   private readonly planFilePathValue: string
 
-  constructor(sessionDir: string) {
+  constructor(sessionDir: string, planFilePath?: string) {
     this.state = 'Inactive'
     this.wasPreviouslyActive = false
     this.reminderCount = 0
     this.pendingExitReminder = false
     this.awaitingPlanApproval = false
     this.pendingActivation = undefined
-    this.planFilePathValue = joinPlanFile(sessionDir)
+    this.planFilePathValue = planFilePath ?? joinPlanFile(sessionDir)
   }
 
-  static fromSnapshot(sessionDir: string, snapshot: PlanModeSnapshot): PlanModeTracker {
+  static fromSnapshot(sessionDir: string, snapshot: PlanModeSnapshot, planFilePath?: string): PlanModeTracker {
     const next = { ...snapshot }
     if (next.state === 'Pending') {
       next.state = 'Inactive'
@@ -38,7 +38,7 @@ export class PlanModeTracker {
       next.state = 'Inactive'
       next.pending_exit_reminder = true
     }
-    const tracker = new PlanModeTracker(sessionDir)
+    const tracker = new PlanModeTracker(sessionDir, planFilePath)
     tracker.state = next.state
     tracker.wasPreviouslyActive = next.was_previously_active
     tracker.reminderCount = next.reminder_count

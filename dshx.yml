@@ -1,5 +1,19 @@
-id: grok-plan-mode
+id: dsh-grok-plan-mode
 entry: src/index.ts
 marker: "[dsh-grok-plan-mode] loaded"
-kind: function
+kind: client
 profile: web
+hotReload:
+  artifacts:
+    - src/index.ts
+    - src/host/plugin.ts
+    - src/host/replacement.ts
+    - src/tracker.ts
+    - src/gate.ts
+    - src/plan-file.ts
+    - src/fold.ts
+    - src/projection.ts
+    - src/prompts.ts
+    - src/reminders.ts
+    - src/review.ts
+    - src/types.ts

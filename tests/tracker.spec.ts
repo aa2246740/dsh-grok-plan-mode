@@ -68,6 +68,21 @@ describe('PlanModeTracker', () => {
     assert.equal(t.planFilePath(), '/home/user/.dsh/sessions/proj/abc-123/plan.md')
   })
 
+  it('restores an explicit Grok plan file path', () => {
+    const restored = PlanModeTracker.fromSnapshot(
+      '/tmp/test-session',
+      {
+        state: 'Active',
+        was_previously_active: true,
+        reminder_count: 0,
+        pending_exit_reminder: false,
+        awaiting_plan_approval: false,
+      },
+      '.grok/plan.md',
+    )
+    assert.equal(restored.planFilePath(), '.grok/plan.md')
+  })
+
   it('compaction resets to the full reminder', () => {
     const t = tracker()
     t.enterPending()

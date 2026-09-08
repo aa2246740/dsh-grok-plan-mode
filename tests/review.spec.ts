@@ -20,6 +20,7 @@ describe('review outcomes', () => {
 
   it('maps resume actions', () => {
     assert.deepEqual(resumeActionFor('approved'), { kind: 'leave_and_implement' })
+    assert.deepEqual(resumeActionFor('approved', 'notes stay with request-changes'), { kind: 'leave_and_implement' })
     assert.deepEqual(resumeActionFor('abandoned', 'ignored'), { kind: 'leave_only' })
     const revise = resumeActionFor('cancelled', 'tweak it')
     assert.equal(revise.kind, 'stay_and_revise')

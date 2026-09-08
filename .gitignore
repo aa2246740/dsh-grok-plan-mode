@@ -4,3 +4,4 @@ lib/*
 .DS_Store
 *.log
 .dshx-check-*
+dsh-grok-plan-mode/

@@ -22,7 +22,16 @@ describe('plan file paths', () => {
       resolved.planFilePath,
       `/home/user/.dsh/sessions/${encodeURIComponent('/workspace/my-project')}/abc-123/plan.md`,
     )
-    assert.equal(fallbackPlanPath('/workspace/my-project'), '/workspace/my-project/.dsh/plan.md')
+    assert.equal(fallbackPlanPath('/workspace/my-project'), '/workspace/my-project/.grok/plan.md')
+  })
+
+  it('uses workspace .grok/plan.md when cwd is missing', () => {
+    const resolved = resolvePlanFilePath({
+      sessionId: 'abc-123',
+      home: '/home/user/.dsh',
+    })
+    assert.equal(resolved.planFilePath, '.grok/plan.md')
+    assert.equal(resolved.fallbackPath, '.grok/plan.md')
   })
 
   it('reads DSH_HOME', () => {
