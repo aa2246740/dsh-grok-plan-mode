@@ -1,6 +1,8 @@
 import type { GrokPlanEventData, GrokPlanProjection, PlanModeState } from './types.ts'
 
-export const GROK_PLAN_EVENT = 'grok-plan/state'
+// Keep the official active bit readable even without this plugin installed.
+export const GROK_PLAN_EVENT = 'plan/mode'
+export const LEGACY_GROK_PLAN_EVENT = 'grok-plan/state'
 
 export type { GrokPlanEventData } from './types.ts'
 
@@ -25,7 +27,7 @@ export function foldGrokPlan(
 ): GrokPlanEventData | undefined {
   let last: GrokPlanEventData | undefined
   for (const event of events) {
-    if (event.type !== GROK_PLAN_EVENT) continue
+    if ((event.type !== GROK_PLAN_EVENT && event.type !== LEGACY_GROK_PLAN_EVENT)) continue
     if (!isGrokPlanEventData(event.data)) continue
     last = event.data
   }
@@ -77,7 +79,7 @@ export function legacyPlanNeedsMigration(events: readonly { type: string; data: 
   let wanted = false
   let pending: { id: unknown; wanted: boolean } | undefined
   for (const event of events) {
-    if (event.type === GROK_PLAN_EVENT && isGrokPlanEventData(event.data)) return false
+    if ((event.type === GROK_PLAN_EVENT || event.type === LEGACY_GROK_PLAN_EVENT) && isGrokPlanEventData(event.data)) return false
     if (typeof event.data !== 'object' || event.data === null) continue
     const data = event.data as Record<string, unknown>
     if (event.type === 'plan/mode') { active = data.active === true; wanted = false }

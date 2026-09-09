@@ -128,7 +128,8 @@ describe('live DSH 0.1.2-rc.1: grok-plan-mode', () => {
 
     await preStep(ctx, agent)
     const last = [...agent.session.snapshotEvents()].reverse().find(event => event.type === GROK_PLAN_EVENT)
-    expect(last?.data).toMatchObject({ state: 'Active' })
+    expect(last?.data).toMatchObject({ state: 'Active', active: true })
+    expect(last?.type).toBe('plan/mode')
     const notices = agent.session.snapshotEvents()
       .flatMap(event => {
         const text = pluginNoticeText(event.type, event.data)

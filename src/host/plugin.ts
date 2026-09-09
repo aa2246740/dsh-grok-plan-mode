@@ -57,6 +57,7 @@ import {
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
+    'plan/mode': { active: boolean }
     'grok-plan/state': {
       state: 'Inactive' | 'Pending' | 'Active' | 'ExitPending'
       was_previously_active: boolean
@@ -100,7 +101,7 @@ export function applyGrokPlanMode(ctx: Context): void {
       plan_file_path: planFilePath,
       plan_has_content: planFileHasContentSync(planFilePath),
     }
-    agent.session.append(GROK_PLAN_EVENT, data)
+    agent.session.append(GROK_PLAN_EVENT, { ...data, active: data.state !== 'Inactive' })
     void writePlanModeJson(pathsOf(agent).sessionDir, data).catch((error: unknown) => {
       ctx.logger.warn('dsh-grok-plan-mode: failed to write plan_mode.json: %o', error)
     })

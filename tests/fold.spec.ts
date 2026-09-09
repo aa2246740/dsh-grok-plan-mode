@@ -100,3 +100,14 @@ describe('global replacement migration', () => {
     assert.equal(legacyPlanNeedsMigration([{type:'plan/mode',data:{active:true}}, {type:GROK_PLAN_EVENT,data:{state:'Inactive',was_previously_active:true,reminder_count:0,pending_exit_reminder:false,awaiting_plan_approval:false,plan_file_path:'/tmp/plan.md'}}]),false)
   })
 })
+
+
+describe('durable official plan event compatibility', () => {
+  it('reads old plugin state and new official envelopes without losing the edit gate', () => {
+    const data = {state:'Active',was_previously_active:true,reminder_count:2,pending_exit_reminder:false,awaiting_plan_approval:true,plan_file_path:'/tmp/plan.md'}
+    assert.equal(GROK_PLAN_EVENT, 'plan/mode')
+    assert.equal(foldGrokPlan([{type:'grok-plan/state',data}])?.state, 'Active')
+    assert.equal(foldGrokPlan([{type:'plan/mode',data:{...data,active:true}}])?.awaiting_plan_approval,true)
+    assert.equal(foldGrokPlan([{type:'plan/mode',data:{active:true}}]),undefined)
+  })
+})

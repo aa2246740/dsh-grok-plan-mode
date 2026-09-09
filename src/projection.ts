@@ -1,6 +1,6 @@
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import { z as zod } from 'zod'
-import { GROK_PLAN_EVENT, viewFromSnapshot } from './fold.ts'
+import { GROK_PLAN_EVENT, LEGACY_GROK_PLAN_EVENT, viewFromSnapshot } from './fold.ts'
 import type { GrokPlanEventData, GrokPlanProjection } from './types.ts'
 
 const grokPlanStateSchema = zod.union([
@@ -33,7 +33,7 @@ export const grokPlanProjectionDefinition = {
   stateSchema: grokPlanStateSchema,
   init: (): GrokPlanEventData | null => null,
   apply: (state, event) => {
-    if (event.type !== GROK_PLAN_EVENT) return state
+    if (event.type !== GROK_PLAN_EVENT && event.type !== LEGACY_GROK_PLAN_EVENT) return state
     const parsed = grokPlanStateSchema.safeParse(event.data)
     if (!parsed.success || parsed.data === null) return state
     return parsed.data
