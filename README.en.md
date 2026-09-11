@@ -4,7 +4,7 @@
 
 Replace official DeepSeek Harness Web 0.1.2-rc.1 Plan with Grok's hard gate.
 
-After `/plan`, the model can only edit this session's `plan.md`. `exit_plan_mode` opens a review card: approve, request changes, quit. auto / always-approve cannot skip it.
+After `/plan`, the model can only edit this session's `plan.md`. `exit_plan_mode` opens a review card: Chat about it, Quit, Approve. auto / always-approve cannot skip it.
 
 Official DSH Plan is a prompt plus two buttons. It does not block file writes. This plugin does. See [xAI Plan Mode](https://docs.x.ai/build/features/plan-mode).
 
@@ -14,13 +14,13 @@ Official DSH Plan is a prompt plus two buttons. It does not block file writes. T
 
 ![`/view-plan` opens the saved plan.md](docs/screenshots/plan-review.png)
 
-![Same card with notes](docs/screenshots/plan-review-comments.png)
-
 DSH Web has no Shift+Tab. After `/plan`, **Plan** appears on the composer. Click × or type `/plan off` to leave. During review the chip becomes **Plan approval**.
 
-- Approve: leave Plan and implement `plan.md`
-- Request changes: keep notes and stay in Plan
+The review card uses the same three actions as official DSH Plan. It does not put line comments on the card:
+
+- Chat about it: stay in Plan and send Grok Request changes so the model revises; type extra detail in the composer after the card closes
 - Quit: drop the plan and leave Plan mode
+- Approve: leave Plan and implement `plan.md`
 
 While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` can only touch this session's `plan.md`. bash is not gated. Subagents do not inherit the parent gate.
 

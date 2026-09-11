@@ -391,9 +391,11 @@ async function presentReview(
         header: 'Plan approval',
         question: 'Review this plan. Auto and always-approve do not skip this step.',
         detail: displayPlanContent(plan),
-        // Official plan-review intent is binary and single-select. Grok's
-        // Approve / Request changes / Quit plus notes stay a generic question
-        // so the plugin composer can intercept it.
+        // Official plan-review intent is binary and single-select. Grok keeps
+        // Approve / Request changes / Quit as a generic question so the plugin
+        // composer can intercept it. The Web card answers those three labels
+        // (Chat about it sends Request changes). ASK_CANCELLED is a dismissed
+        // review, not the revise path.
         multiSelect: true,
         options: [
           { label: APPROVE_LABEL, description: 'Leave plan mode and start implementing.' },

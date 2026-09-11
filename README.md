@@ -4,7 +4,7 @@
 
 把 DeepSeek Harness Web 0.1.2-rc.1 的官方 Plan 换成 Grok 那一套硬闸。
 
-`/plan` 之后，模型只能改这个 session 的 `plan.md`。调用 `exit_plan_mode` 时会出现审批卡：批准、要求修改、放弃。auto / always-approve 跳不过去。
+`/plan` 之后，模型只能改这个 session 的 `plan.md`。调用 `exit_plan_mode` 时会出现审批卡：去聊天里说、放弃、批准。auto / always-approve 跳不过去。
 
 官方 DSH Plan 是提示词加两个按钮，不拦写文件。这个插件拦。对照 [xAI Plan Mode](https://docs.x.ai/build/features/plan-mode)。
 
@@ -14,13 +14,13 @@
 
 ![`/view-plan` 打开已写好的 plan.md](docs/screenshots/plan-review.png)
 
-![同一张卡，Notes 里写了说明](docs/screenshots/plan-review-comments.png)
-
 DSH Web 没有 Shift+Tab。`/plan` 之后输入框上出现 **Plan**。点 × 或打 `/plan off` 退出。审批中芯片变成 **Plan approval**。
 
-- Approve：离开 Plan，按 `plan.md` 开始做
-- Request changes：说明和行批注留下来，继续停在 Plan
-- Quit：丢掉 plan，关掉 Plan mode
+审阅卡跟官方 Plan 卡同一套动作，不在卡片上做行批注：
+
+- 去聊天里说：继续停在 Plan，走 Grok 的 Request changes，模型去改；卡关掉后可在输入框补充
+- 放弃：丢掉 plan，关掉 Plan mode
+- 批准：离开 Plan，按 `plan.md` 开始做
 
 Active 时，`write` / `edit` / `str_replace_editor` / `apply_patch` 只能动 session 的 `plan.md`。bash 不闸。子代理也不走父级这道闸。
 
