@@ -2,7 +2,32 @@
 
 # dsh-grok-plan-mode
 
-把 DeepSeek Harness Web 0.1.2-rc.1 的官方 Plan 换成 Grok 那一套硬闸。
+把官方 DeepSeek Harness Plan 换成 Grok 那一套硬闸。
+
+```sh
+dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+PATH 上要有 **pnpm**，以及 `dsh`（或 `npx @deepseek-ai/dsh`）。装完**重启这个 Host，再刷新页面**。`dsh plugin add` 只写 profile，不会热挂正在跑的进程。仓库已提交 `lib/`，git 安装不用再 build。
+
+`dsh` 不在 PATH 时：
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+或本地 clone：
+
+```sh
+git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
+dsh plugin --profile web add ./dsh-grok-plan-mode
+```
+
+```sh
+dsh plugin --profile web remove dsh-grok-plan-mode
+```
+
+面向官方 DSH **0.1.5-rc.2** 的 web profile。DSH.app 的插件窗口只收 npm 包名；桌面用户请用 `dsh web` 再跑上面这条。
 
 `/plan` 之后，模型只能改这个 session 的 `plan.md`。调用 `exit_plan_mode` 时会出现审批卡：去聊天里说、放弃、批准。auto / always-approve 跳不过去。
 
@@ -16,6 +41,8 @@
 
 DSH Web 没有 Shift+Tab。`/plan` 之后输入框上出现 **Plan**。点 × 或打 `/plan off` 退出。审批中芯片变成 **Plan approval**。
 
+`cordis.yml` 会禁用 Host 上的 `ui-plan` / `plan-mode`，再插入本插件。`/plan`、`exit_plan_mode`、`conversation.input.plan` 都是单座，不要再挂一份官方 Plan。
+
 审阅卡跟官方 Plan 卡同一套动作，不在卡片上做行批注：
 
 - 去聊天里说：继续停在 Plan，走 Grok 的 Request changes，模型去改；卡关掉后可在输入框补充
@@ -24,24 +51,7 @@ DSH Web 没有 Shift+Tab。`/plan` 之后输入框上出现 **Plan**。点 × �
 
 Active 时，`write` / `edit` / `str_replace_editor` / `apply_patch` 只能动 session 的 `plan.md`。bash 不闸。子代理也不走父级这道闸。
 
-## 安装
-
-先卸官方 Plan。`/plan`、`exit_plan_mode`、`conversation.input.plan` 都是单座，不能双注册。
-
-```sh
-dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
-```
-
-或本地 clone：
-
-```sh
-git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
-dsh plugin --profile web add ./dsh-grok-plan-mode
-```
-
-首次安装按 DSHX 的 manifest 激活判断操作；已加载本 bundle 的 Host 可用支持 bundle 定位的 DSHX 做同 PID 服务端热更新，无需重复安装或重启。`cordis.yml` 会禁用 host 上的 `ui-plan` / `plan-mode`，再插入本插件。
-
-插件现在统一接管所有模式的 Plan：标准、PTC、极简、创造模式、Creator Mode+ 以及后续自定义预设。通过 Cordis 生命周期阻止预设重新激活官方 Plan，保留 Loader 中禁用行；不需要复制或修改各份预设。已运行的官方 Plan 也会被替换，旧的活动计划保守迁移为 Grok 活动计划，不会自动批准。卸载时恢复本插件接管的运行行。
+插件接管当前 Host 上各预设里的官方 Plan：标准、PTC、极简、创造模式，以及之后的自定义预设。通过 Cordis 生命周期阻止预设重新激活官方 Plan，保留 Loader 中禁用行；不需要复制或修改各份预设。已运行的官方 Plan 也会被替换，旧的活动计划保守迁移为 Grok 活动计划，不会自动批准。卸载时恢复本插件接管的运行行。
 
 ## 命令
 

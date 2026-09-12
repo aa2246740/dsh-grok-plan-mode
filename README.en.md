@@ -2,7 +2,32 @@
 
 # dsh-grok-plan-mode
 
-Replace official DeepSeek Harness Web 0.1.2-rc.1 Plan with Grok's hard gate.
+Replace official DeepSeek Harness Plan with Grok's hard gate.
+
+```sh
+dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+You need **pnpm** on PATH, plus `dsh` (or `npx @deepseek-ai/dsh`). Then **restart that Host and reload the page**. `dsh plugin add` only writes the profile; it does not hot-load a running process. This repo commits `lib/`, so a git install does not need a build.
+
+If `dsh` is not on PATH:
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
+```
+
+Or from a clone:
+
+```sh
+git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
+dsh plugin --profile web add ./dsh-grok-plan-mode
+```
+
+```sh
+dsh plugin --profile web remove dsh-grok-plan-mode
+```
+
+This is for official DSH **0.1.5-rc.2** `web` profiles. The DSH.app plugin window accepts npm names only; Desktop users should run `dsh web` and the command above.
 
 After `/plan`, the model can only edit this session's `plan.md`. `exit_plan_mode` opens a review card: Chat about it, Quit, Approve. auto / always-approve cannot skip it.
 
@@ -16,6 +41,8 @@ Official DSH Plan is a prompt plus two buttons. It does not block file writes. T
 
 DSH Web has no Shift+Tab. After `/plan`, **Plan** appears on the composer. Click × or type `/plan off` to leave. During review the chip becomes **Plan approval**.
 
+`cordis.yml` disables host `ui-plan` / `plan-mode` and inserts this plugin. `/plan`, `exit_plan_mode`, and `conversation.input.plan` are single-seat; do not mount official Plan again.
+
 The review card uses the same three actions as official DSH Plan. It does not put line comments on the card:
 
 - Chat about it: stay in Plan and send Grok Request changes so the model revises; type extra detail in the composer after the card closes
@@ -24,24 +51,7 @@ The review card uses the same three actions as official DSH Plan. It does not pu
 
 While Active, `write` / `edit` / `str_replace_editor` / `apply_patch` can only touch this session's `plan.md`. bash is not gated. Subagents do not inherit the parent gate.
 
-## Install
-
-Unload official Plan first. `/plan`, `exit_plan_mode`, and `conversation.input.plan` are single-seat.
-
-```sh
-dsh plugin --profile web add github:aa2246740/dsh-grok-plan-mode
-```
-
-Or from a clone:
-
-```sh
-git clone https://github.com/aa2246740/dsh-grok-plan-mode.git
-dsh plugin --profile web add ./dsh-grok-plan-mode
-```
-
-For first installation follow the DSHX manifest activation decision. An already-loaded bundle supports same-PID server updates with bundle-aware DSHX; do not reinstall or restart it merely to update code. `cordis.yml` disables host `ui-plan` / `plan-mode` and inserts this plugin.
-
-Plan is replaced across Standard, PTC, Minimal, Creator Mode, Creator Mode+, and future custom presets. A Cordis lifecycle observer suppresses official Plan rows before activation and replaces existing instances without rewriting preset files. Active legacy plans migrate conservatively into Grok Plan without approval. Unloading restores the runtime rows owned by this replacement.
+Plan is replaced across Standard, PTC, Minimal, Creator Mode, and later custom presets on this Host. A Cordis lifecycle observer suppresses official Plan rows before activation and replaces existing instances without rewriting preset files. Active legacy plans migrate conservatively into Grok Plan without approval. Unloading restores the runtime rows owned by this replacement.
 
 ## Commands
 
