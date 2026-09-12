@@ -1,10 +1,11 @@
 {
   "name": "dsh-grok-plan-mode",
-  "version": "0.1.1",
-  "description": "Grok Build Plan Mode for DeepSeek Harness 0.1.2-rc.1. Replaces official DSH Plan with a hard edit gate.",
+  "version": "0.1.2",
+  "description": "Grok Build Plan Mode for DeepSeek Harness. Replaces official DSH Plan with a hard edit gate.",
   "type": "module",
   "license": "MIT",
   "private": false,
+  "main": "lib/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aa2246740/dsh-grok-plan-mode.git"
@@ -14,7 +15,7 @@
     "url": "https://github.com/aa2246740/dsh-grok-plan-mode/issues"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./lib/index.js",
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
@@ -36,8 +37,10 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
-    "test": "node --experimental-strip-types --test tests/tracker.spec.ts tests/reminders.spec.ts tests/gate.spec.ts tests/review.spec.ts tests/plan-file.spec.ts tests/fold.spec.ts tests/prompts.spec.ts",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "node scripts/build-server.mjs",
+    "build:client": "tsdown --config tsdown.config.ts",
+    "test": "node --experimental-strip-types --test tests/tracker.spec.ts tests/reminders.spec.ts tests/gate.spec.ts tests/review.spec.ts tests/plan-file.spec.ts tests/fold.spec.ts tests/prompts.spec.ts tests/package-contract.spec.ts",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "check": "npm test && npm run typecheck && npm run build",
     "test:replacement": "node --experimental-strip-types tests/global-replacement.mjs"
@@ -49,10 +52,12 @@
     "deepseek-harness",
     "dsh",
     "plan-mode",
-    "grok-build"
+    "grok-build",
+    "dsh-plugin"
   ],
   "files": [
     "src",
+    "lib/index.js",
     "lib/client.js",
     "overlays",
     "cordis.yml",

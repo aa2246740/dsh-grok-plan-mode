@@ -1,5 +1,5 @@
 /**
- * Grok Build Plan Mode for DeepSeek Harness 0.1.2-rc.1.
+ * Grok Build Plan Mode for DeepSeek Harness.
  *
  * File-backed plan.md, a hard edit gate, and a three-way review.
  * This package does not patch DSH source.
