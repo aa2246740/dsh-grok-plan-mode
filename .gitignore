@@ -2,6 +2,7 @@ node_modules/
 lib/*
 !lib/client.js
 !lib/index.js
+pnpm-lock.yaml
 .DS_Store
 *.log
 .dshx-check-*
