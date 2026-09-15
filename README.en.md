@@ -2,6 +2,24 @@
 
 # dsh-grok-plan-mode
 
+## Maintenance paused (2026-09-15)
+
+This project is not currently maintained or recommended as a replacement for DeepSeek Harness Plan. Use the official DSH `/plan`. The source remains available for research. For Grok's native Plan workflow, use Grok itself.
+
+### Why maintenance is paused
+
+The implementation takes over `/plan`, enter/exit tools, edit restrictions, approval handoff, session state, and composer controls. It also uses Cordis lifecycle hooks to suppress official Plan instances in existing and future Agent presets, while its profile bundle disables official `ui-plan` / `plan-mode` entries. Replacing Plan therefore depends on DSH's session and runtime behavior.
+
+Preset changes, tool approval, history replay, state projections, and plugin loading must be verified together. Legacy custom `grok-plan/state` events previously made some session histories unreadable by the official persistence layer, requiring compatibility work. Removing the package alone is also insufficient: the bundle's disabling rules and active replacements must be undone. The cost of coupled changes and regression checks has become too high to continue adapting this replacement.
+
+### Existing installations
+
+Use an external Agent and DSHX `plugin remove dsh-grok-plan-mode --profile web --port <current-port>`, then verify that official Plan commands, tools, and UI work again. The Loader row ID is `grok-plan-mode`, which differs from the package name. If DSHX cannot prove `HOST_TREE_INACTIVE`, an external supervisor must verify and disable the actual row, restore official `ui-plan`, and retry the same removal command before removing package files. Restore `plan-mode` according to the original profile/preset composition instead of enabling it globally. Preserve session directories, `plan.md`, and `plan_mode.json`. If old history contains `grok-plan/state` events that the current DSH cannot read, back it up before addressing compatibility; do not delete history as a workaround. Pausing maintenance does not approve or complete any existing plan.
+
+The remaining sections document the experimental implementation for research and are no longer current installation recommendations.
+
+---
+
 Replace official DeepSeek Harness Plan with Grok's hard gate.
 
 ```sh

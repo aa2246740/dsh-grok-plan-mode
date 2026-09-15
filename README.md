@@ -2,6 +2,24 @@
 
 # dsh-grok-plan-mode
 
+## 维护暂停（2026-09-15）
+
+本项目暂不维护，不再推荐安装或作为 DeepSeek Harness 的 Plan 替代实现。请使用 DSH 官方自带的 `/plan`。源码保留供研究；如需 Grok 原生的 Plan 流程，请在 Grok 中使用。
+
+### 为什么暂停
+
+这套实现接管 `/plan`、进入与退出 Plan 的工具、编辑限制、审批交接、会话状态和输入框控件，并通过 Cordis 生命周期停用现有及后续 Agent 预设中的官方 Plan。它还通过 profile bundle 禁用官方 `ui-plan` / `plan-mode`。这些依赖使替换范围扩展到了 DSH 的会话与运行机制。
+
+实际维护中，预设切换、工具审批、历史回放、状态投影和插件装卸必须一起验证。旧版自定义 `grok-plan/state` 事件曾导致部分历史会话无法被官方持久化层读取；升级和退出需要处理历史兼容。移除包本身也不足以恢复官方 Plan：还要撤销 bundle 的禁用规则和运行中的接管。联动修改和回归检查的成本过高，因此暂停继续适配。
+
+### 已安装用户
+
+由外部 Agent 使用 DSHX 的 `plugin remove dsh-grok-plan-mode --profile web --port <当前端口>` 安全卸载，并确认官方 Plan 命令、工具和面板恢复。本仓库的 Loader 行标识是 `grok-plan-mode`，与包名不同；若 DSHX 报告无法证明 `HOST_TREE_INACTIVE`，应由外部监督器核对并停用实际挂载行、恢复官方 `ui-plan`，再重试原卸载命令，不能提前删除包文件。官方 `plan-mode` 应按原有 profile / 预设恢复，不能一律在根作用域开启。先保留会话目录、`plan.md` 和 `plan_mode.json`；若旧历史仍含不被当前 DSH 识别的 `grok-plan/state`，先备份再处理兼容，不能靠删历史解决。停维护不代表旧计划已获批准或执行完成。
+
+以下内容记录实验版本的设计与用法，仅供研究，不再作为当前安装建议。
+
+---
+
 把官方 DeepSeek Harness Plan 换成 Grok 那一套硬闸。
 
 ```sh
